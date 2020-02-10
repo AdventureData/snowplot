@@ -1,6 +1,8 @@
 from .utilities import get_logger
 import numpy as np
 import pandas as pd
+from snowmicropyn import Profile as SMP
+from os.path import abspath, expanduser, basename
 
 class GenericProfile(object):
     """
@@ -9,11 +11,15 @@ class GenericProfile(object):
     """
 
     def __init__(self, **kwargs):
+
+        # Add config items as attributes
         for k,v in kwargs.items():
             setattr(self, k, v)
 
         name = type(self).__name__.replace('Profile','')
         self.log = get_logger(name)
+
+        self.filename = abspath(expanduser(self.filename))
 
         # Number of lines to ignore in a csv
         self.header = 0
@@ -59,13 +65,13 @@ class GenericProfile(object):
 
         return df
 
-    def additional_processing(df, **kwarg):
+    def additional_processing(self, df):
         """
         Abstract Processing function to redefine for individual datatypes. Automatically
         called in processing.
 
         Args:
-            **kwargs: config options
+            df: dataframe
         Returns:
             df: pandas dataframe
         """
@@ -90,6 +96,8 @@ class LyteProbeProfile(GenericProfile):
         it was from the app, if it fails tries again assuming it is from
         radicl
         """
+        self.log.info("Opening filename {}".format(basename(self.filename)))
+
         # Collect the header
         self.header_info = {}
 
@@ -108,10 +116,13 @@ class LyteProbeProfile(GenericProfile):
 
         if 'radicl version' in  self.header_info.keys():
             self.data_type = 'radicl'
+            columns = ['depth','sensor_1','sensor_2','sensor_3','sensor_4']
+
         else:
             self.data_type = 'rad_app'
+            columns = ['sample','depth','sensor_1','sensor_2','sensor_3','sensor_4']
 
-        df = pd.read_csv(self.filename, header=self.header, names=['sample','depth','sensor_1','sensor_2','sensor_3','sensor_4'])
+        df = pd.read_csv(self.filename, header=self.header, names=columns)
 
         return df
 
@@ -124,4 +135,26 @@ class LyteProbeProfile(GenericProfile):
                                          len(df.index))
 
         df.set_index('depth', inplace=True)
+        return df
+
+
+class SnowMicroPenProfile(GenericProfile):
+    """
+    A simple class reflection of the python package snowmicropyn class for
+    smp measurements
+    """
+    def __init__(self, **kwargs):
+        super(SnowMicroPenProfile, self).__init__(**kwargs)
+        self.columns_to_plot = ['force']
+        print(self.color)
+
+    def open(self):
+        self.log.info("Opening filename {}".format(basename(self.filename)))
+        p = SMP.load(self.filename)
+        ts = p.timestamp
+        coords = p.coordinates
+        df = p.samples
+
+        df['depth'] = df['distance'].div(-10)
+        df = df.set_index('depth')
         return df

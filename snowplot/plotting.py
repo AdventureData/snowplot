@@ -4,8 +4,6 @@ from os.path import basename
 from .utilities import get_logger
 
 
-log = get_logger(__name__)
-
 
 def add_plot_labels(df, label_list):
 	"""
@@ -16,16 +14,18 @@ def add_plot_labels(df, label_list):
         label_list: List of strings containing label and index to place it in the format of (<lable> > <depth>)
 	a list of labels in the format of [(<label> > <depth>),]
 	"""
-	for l in label_list:
+	log = get_logger(__name__)
 
-		if " " in l:
-			l_str = "".join([s for s in l if s not in '()'])
-			label, depth  = l_str.split(">")
-			depth = float(depth)
-			idx = (np.abs(df.index - depth)).argmin()
-			y_val = df.index[idx]
-			x_val = df.loc[y_val] + 150
-			plt.annotate(label,( x_val, y_val))
+	if label_list != None:
+		for l in label_list:
+			if " " in l:
+				l_str = "".join([s for s in l if s not in '()'])
+				label, depth  = l_str.split(">")
+				depth = float(depth)
+				idx = (np.abs(df.index - depth)).argmin()
+				y_val = df.index[idx]
+				x_val = df.loc[y_val] + 150
+				plt.annotate(label,( x_val, y_val))
 
 def build_figure(data, cfg):
 	"""
@@ -39,39 +39,45 @@ def build_figure(data, cfg):
 	"""
 	# Build plots
 	fig = plt.figure(figsize=np.array((cfg['output']['figure_size'])))
+	log = get_logger(__name__)
 
 	for name, profile in data.items():
 	    # Plot up the data
 		log.info("Plotting {}".format(name))
 
 		df = profile.df
-		print(profile.columns_to_plot)
 		for c in profile.columns_to_plot:
-			log.debug("\tAdding {}".format(c))
-			plt.plot(df[c], df[c].index, label=c)
-
-		# Add the labels for the crystals
-		add_plot_labels(df[c], cfg['labeling']['plot_labels'])
+			log.debug("Adding {}.{}".format(name, c))
+			plt.plot(df[c], df[c].index, c=profile.color, label=c)
 
 		# Fill the plot in like our app
-		plt.fill_betweenx(df.index, df[c], 0, interpolate=True)
+		if profile.fill_solid:
+			plt.fill_betweenx(df.index, df[c], 0, facecolor=profile.color, interpolate=True)
 
-		if cfg['labeling']['title'] != None:
-			plt.title(cfg['labeling']['title'])
+	# Custom title
+	if cfg['labeling']['title'] != None:
+		title = cfg['labeling']['title'].title()
 
-		elif cfg['labeling']['use_filename_title']:
-			plt.title(basename(profile.filename))
+	# Use the file name
+	elif cfg['labeling']['use_filename_title']:
+		title = []
+		for name, profile in data.items():
+			title.append(basename(profile.filename))
+		title = ' vs '.join(title)
 
-		else:
-			raise ValueError("Must either have use title to true or provide a title name")
+	else:
+		raise ValueError("Must either have use title to true or provide a title name")
 
-		#plt.legend()
-		plt.xlabel(cfg['labeling']['xlabel'])
-		plt.ylabel(cfg['labeling']['ylabel'])
+	# Title
+	plt.title(title)
 
-		plt.xlim(cfg['plotting']['xlimits'])
+	# add_plot_labels
+	plt.xlabel(cfg['labeling']['xlabel'].title())
+	plt.ylabel(cfg['labeling']['ylabel'].title())
 
-		if cfg['plotting']['ylimits'] != None:
-			plt.ylim(cfg['plotting']['ylimits'])
+	plt.xlim(cfg['plotting']['xlimits'])
 
-		plt.show()
+	if cfg['plotting']['ylimits'] != None:
+		plt.ylim(cfg['plotting']['ylimits'])
+
+	plt.show()

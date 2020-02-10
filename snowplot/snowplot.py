@@ -10,6 +10,8 @@ from .plotting import  add_plot_labels, build_figure
 
 """Main module."""
 log = get_logger('snowplot')
+
+
 def make_vertical_plot(config_file):
     """
     Main function in snowplot to interpret config files and piece together the
@@ -53,11 +55,8 @@ def make_vertical_plot(config_file):
         if profile_name in requested_profiles.keys():
             name = requested_profiles[profile_name]
             log.info("Building {} profile".format(name))
-            # add it to our dictionary of data
+            # Add it to our dictionary of data
             data[profile_name] = cls(**cfg[name])
 
     # Build the final figure
     build_figure(data, cfg)
-
-if __name__ == '__main__':
-	main()
