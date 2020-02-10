@@ -1,88 +1,63 @@
-from .utilities import getLogger
+import matplotlib.pyplot as plt
+from inicheck.tools import get_user_config, check_config, get_checkers
+from inicheck.output import print_config_report, generate_config
+import numpy as np
+import sys
+
+from . utilities import get_logger
+from . import profiles
+from .plotting import  add_plot_labels, build_figure
 
 """Main module."""
+log = get_logger('snowplot')
+def make_vertical_plot(config_file):
+    """
+    Main function in snowplot to interpret config files and piece together the
+    plot users describe in the config file
 
-def main():
+    Args:
+        config_file: config file in .ini format and can be checked with inicheck
+    """
 
-	parser = argparse.ArgumentParser(description='Plot various versions of probe data.')
-	parser.add_argument('config_file', help='path to config_file')
-	args = parser.parse_args()
+    # Get the cfg
+    ucfg = get_user_config(config_file,
+    					   modules=['snowplot'])
+    warnings, errors = check_config(ucfg)
 
-	# Provide a opportunity to look at lots
-	if args.config_file == None:
-		print("Please provide a config file for plots")
-		sys.exit()
+    print_config_report(warnings, errors)
+    if len(errors) > 0:
+    	print("Errors in config file. Check report above.")
+    	sys.exit()
 
-	# Get the cfg
-	ucfg = get_user_config(args.config_file,
-						   master_files=['./master.ini','./recipes.ini'],
-						   checking_later=False)
-	warnings, errors = check_config(ucfg)
+    # outut a config file
+    generate_config(ucfg, 'config.ini')
 
-	print_config_report(warnings, errors)
-	if len(errors) > 0:
-		print("Errors in config file. Check report above.")
-		sys.exit()
+    # Grab a copy of the config dictionary
+    cfg = ucfg.cfg
+    data = {}
 
-	generate_config(ucfg,'config.ini')
-	cfg = ucfg.cfg
+    # gather all the templates for creating profiles
+    profile_classes = get_checkers(module='snowplot.profiles',
+                                          keywords='profile')
 
-	# Cycle through all the files
-	for f in cfg['data']['files']:
-		bname = os.path.basename(f)
-		fname = os.path.expanduser(f)
-		fname = os.path.abspath(fname)
+    # Create a map of the class names to the config names
+    requested_profiles = {}
+    for v in cfg.keys():
+        if v not in ['output','plotting','labeling']:
+            k = v.replace('_','').lower()
+            requested_profiles[k] = v
 
-		# Open the file and set the index to depth
-		df_o = open_adjust_profile(fname, header=cfg['data']['header_size'])
+    # Create the profile objects and prerpare to add them to the figure
+    for profile_name, cls in profile_classes.items():
 
-		# Only get the columns were interested in
-		df = df_o.copy()
+        if profile_name in requested_profiles.keys():
+            name = requested_profiles[profile_name]
+            log.info("Building {} profile".format(name))
+            # add it to our dictionary of data
+            data[profile_name] = cls(**cfg[name])
 
-		# Check for smoothing request
-		if cfg['profiles']['smoothing'] != None:
-			df = df.rolling(window = cfg['profiles']['smoothing']).mean()
-
-		# Check for average profile
-		if cfg['profiles']['average']:
-			df['average'] = df.mean(axis = 1)
-			cfg['profiles']['columns_of_interest'] = ['average']
-
-		fig = plt.figure(figsize=np.array((cfg['output']['figure_size'])))
-
-		#Plot up the data
-		for c in cfg['profiles']['columns_of_interest']:
-			plt.plot(df[c], df[c].index, label=c)
-
-			# Add the labels for the crystals
-			add_plot_labels(df[c], cfg['labeling']['plot_labels'])
-
-			# Fill the plot in like our app
-			plt.fill_betweenx(df.index,df[c], 0, interpolate=True)
-
-		if cfg['labeling']['title'] != None:
-			plt.title(cfg['labeling']['title'])
-
-		elif cfg['labeling']['use_filename_title']:
-			plt.title(os.path.basename(f))
-
-		else:
-			raise ValueError("Must either have use title to true or provide a title name")
-
-		#plt.legend()
-		plt.xlabel(cfg['labeling']['xlabel'])
-		plt.ylabel(cfg['labeling']['ylabel'])
-
-		plt.xlim(cfg['profiles']['xlimits'])
-
-		if cfg['profiles']['ylimits'] != None:
-			plt.ylim(cfg['profiles']['ylimits'])
-
-		plt.show()
-
-		#except Exception as e:
-		#	print(e)
-
+    # Build the final figure
+    build_figure(data, cfg)
 
 if __name__ == '__main__':
 	main()
