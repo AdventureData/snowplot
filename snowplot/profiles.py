@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from snowmicropyn import Profile as SMP
 from os.path import abspath, expanduser, basename
+import matplotlib.pyplot as plt
+
 
 class GenericProfile(object):
     """
@@ -146,7 +148,6 @@ class SnowMicroPenProfile(GenericProfile):
     def __init__(self, **kwargs):
         super(SnowMicroPenProfile, self).__init__(**kwargs)
         self.columns_to_plot = ['force']
-        print(self.color)
 
     def open(self):
         self.log.info("Opening filename {}".format(basename(self.filename)))
@@ -157,4 +158,115 @@ class SnowMicroPenProfile(GenericProfile):
 
         df['depth'] = df['distance'].div(-10)
         df = df.set_index('depth')
+        return df
+
+
+class HandHardnessProfile(GenericProfile):
+    """
+    A class for handling hand hardness data. Currently set for only reading a
+    custom file but later will read other data
+    """
+    def __init__(self, **kwargs):
+
+        # Build the numeric scale
+        scale = {}
+        count = 1
+        for h in ['F','4F','1F','P','K','I']:
+            scale[h] = count
+            count += 1.0
+
+            if h != 'I':
+                for b in ['-', '+']:
+                    scale['{}{}'.format(h,b)] = count
+                    count += 1.0
+        print(count)
+        self.scale = scale
+
+        super(HandHardnessProfile, self).__init__(**kwargs)
+        self.fill_solid = True
+        self.columns_to_plot = ['numeric']
+
+    def open(self):
+        self.log.info("Opening filename {}".format(basename(self.filename)))
+
+        # Simple text file
+        if self.filename.split('.')[-1] == 'txt':
+            df = self.read_simple_text(self.filename)
+            df = df.set_index('depth')
+            print(df)
+        return df
+
+    def read_snowpilot(filename=None, url=None):
+        pass
+
+    def read_simple_text(self, filename):
+        """
+        Reads in a text file containing only hardness information
+        Format is in depth1-depth2:hardness_value
+        Args:
+            filname: path to the text file
+        Returns:
+            df: pandas dataframe
+        """
+        depth = []
+        hardness = []
+
+        # open text file
+        with open(filename,'r') as fp:
+            lines = fp.readlines()
+            fp.close()
+
+        for i, line in enumerate(lines):
+
+            # Parse a line entry
+            if '=' in line:
+                data = line.split('=')
+
+                if len(data) == 2:
+                    depth_range = data[0]
+                    hardness_range = data[1]
+
+                else:
+                    raise ValueError("Only one = can be used to represent "
+                                     "hand hardness in text file. "
+                                     "On line #{}.".format(i))
+                # parse depth range
+                if '-' in depth_range:
+                     d = depth_range.split('-')
+                     for dv in d:
+                         depth.append(float(dv.strip()))
+
+                # parse hardness scale when a range
+                if ',' in hardness_range:
+                     hv = hardness_range.split(',')
+
+                # Single hardness value but represents two spots
+                else:
+                    hv = [hardness_range, hardness_range]
+
+                # Parse the values and map them
+                for h in hv:
+                    hardness.append(h.upper().strip())
+
+        df = pd.DataFrame(columns=['depth','hardness','numeric'])
+
+        # Check for positive depth
+        mn = min(depth)
+        mx = max(depth)
+        if mx > 0 and mn >= 0:
+            self.log.debug('Positive snow height, inverting to negative')
+            depth = [d - mx for d in depth]
+
+        # Cap the data so it looks clean
+        data = {'depth':0, 'hardness':'-', 'numeric':0}
+        df = df.append(data, ignore_index=True)
+
+        for d,h in zip(depth, hardness):
+            data = {'depth':d, 'hardness':h, 'numeric':self.scale[h]}
+            df = df.append(data, ignore_index=True)
+
+        # Cap the data so it looks good
+        data = {'depth':min(depth), 'hardness':'-', 'numeric':0}
+        df = df.append(data, ignore_index=True)
+
         return df

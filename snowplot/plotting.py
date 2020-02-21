@@ -46,13 +46,14 @@ def build_figure(data, cfg):
 		log.info("Plotting {}".format(name))
 
 		df = profile.df
+		
 		for c in profile.columns_to_plot:
 			log.debug("Adding {}.{}".format(name, c))
 			plt.plot(df[c], df[c].index, c=profile.color, label=c)
 
-		# Fill the plot in like our app
-		if profile.fill_solid:
-			plt.fill_betweenx(df.index, df[c], 0, facecolor=profile.color, interpolate=True)
+			# Fill the plot
+			if profile.fill_solid:
+				plt.fill_betweenx(df.index, np.array(df[c],dtype=int), np.zeros_like(df[c].shape), facecolor=profile.color, interpolate=True)
 
 	# Custom title
 	if cfg['labeling']['title'] != None:

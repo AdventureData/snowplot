@@ -6,9 +6,6 @@ snowplot
 .. image:: https://img.shields.io/pypi/v/snowplot.svg
         :target: https://pypi.python.org/pypi/snowplot
 
-.. image:: https://img.shields.io/travis/micahjohnson150/snowplot.svg
-        :target: https://travis-ci.com/micahjohnson150/snowplot
-
 .. image:: https://readthedocs.org/projects/snowplot/badge/?version=latest
         :target: https://snowplot.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
@@ -40,6 +37,8 @@ Features
 * Manage repeatable figures using a config file
 * Add annotations to plots with simple text
 * Plot Lyte Probe Data
+* Plot hand hardness data
+* Plot Snow micropen data
 
 
 Credits
