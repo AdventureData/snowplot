@@ -11,8 +11,7 @@ def add_plot_labels(df, label_list):
 
     Args:
         df: pandas dataframe in which the index is the y axis of the plot
-        label_list: List of strings containing label and index to place it in the format of (<lable> > <depth>)
-	a list of labels in the format of [(<label> > <depth>),]
+        label_list: a list of labels in the format of [(<label> > <depth>),]
 	"""
 	log = get_logger(__name__)
 
@@ -37,48 +36,48 @@ def build_figure(data, cfg):
 			output, and labeling sections
 
 	"""
-	# Build plots
-	fig = plt.figure(figsize=np.array((cfg['output']['figure_size'])))
 	log = get_logger(__name__)
+
+	# the size of a single plot
+	fsize = np.array(cfg['output']['figure_size'])
+
+	# Expands the size in the x dir for each plot
+	nplots =  cfg['plotting']['num_subplots']
+	fsize[0] = fsize[0] * nplots
+
+	# Build (sub)plots
+	fig, axes = plt.subplots(1, nplots, figsize=fsize)
 
 	for name, profile in data.items():
 	    # Plot up the data
 		log.info("Plotting {}".format(name))
 
 		df = profile.df
-		
+		pid = profile.plot_id
+		ax = axes[pid]
+
 		for c in profile.columns_to_plot:
 			log.debug("Adding {}.{}".format(name, c))
-			plt.plot(df[c], df[c].index, c=profile.color, label=c)
+			ax.plot(df[c], df[c].index, c=profile.color, label=c)
 
 			# Fill the plot
 			if profile.fill_solid:
-				plt.fill_betweenx(df.index, np.array(df[c],dtype=int), np.zeros_like(df[c].shape), facecolor=profile.color, interpolate=True)
+				ax.fill_betweenx(df.index, np.array(df[c],dtype=int), np.zeros_like(df[c].shape), facecolor=profile.color, interpolate=True)
 
-	# Custom title
-	if cfg['labeling']['title'] != None:
-		title = cfg['labeling']['title'].title()
+		# Custom titles
+		if cfg['labeling']['title'] != None:
+			title = cfg['labeling']['title'][pid].title()
+			ax.set_title(title)
 
-	# Use the file name
-	elif cfg['labeling']['use_filename_title']:
-		title = []
-		for name, profile in data.items():
-			title.append(basename(profile.filename))
-		title = ' vs '.join(title)
+		# add_plot_labels
+		ax.set_xlabel(cfg['labeling']['xlabel'][pid].title())
+		ax.set_ylabel(cfg['labeling']['ylabel'].title())
 
-	else:
-		raise ValueError("Must either have use title to true or provide a title name")
+		# Set limits
+		print(cfg['plotting']['xlimits'][2*pid:pid+2])
+		ax.set_xlim(cfg['plotting']['xlimits'][2*pid:2*pid+2])
 
-	# Title
-	plt.title(title)
-
-	# add_plot_labels
-	plt.xlabel(cfg['labeling']['xlabel'].title())
-	plt.ylabel(cfg['labeling']['ylabel'].title())
-
-	plt.xlim(cfg['plotting']['xlimits'])
-
-	if cfg['plotting']['ylimits'] != None:
-		plt.ylim(cfg['plotting']['ylimits'])
+		if cfg['plotting']['ylimits'] != None:
+			ax.set_ylim(cfg['plotting']['ylimits'])
 
 	plt.show()

@@ -29,6 +29,10 @@ class GenericProfile(object):
         df = self.open()
         self.df = self.processing(df)
 
+        # Zero base the plot id
+        self.plot_id -= 1
+
+
     def open(self):
         """
         Function used to standardize opening data sets, Should be overwritten if
