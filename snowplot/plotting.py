@@ -54,7 +54,12 @@ def build_figure(data, cfg):
 
 		df = profile.df
 		pid = profile.plot_id
-		ax = axes[pid]
+
+		if nplots > 1:
+			ax = axes[pid]
+		else:
+			ax = axes
+
 
 		for c in profile.columns_to_plot:
 			log.debug("Adding {}.{}".format(name, c))
@@ -62,7 +67,7 @@ def build_figure(data, cfg):
 
 			# Fill the plot
 			if profile.fill_solid:
-				ax.fill_betweenx(df.index, np.array(df[c],dtype=int), np.zeros_like(df[c].shape), facecolor=profile.color, interpolate=True)
+				ax.fill_betweenx(df.index, np.array(df[c], dtype=float), np.zeros_like(df[c].shape), facecolor=profile.color, interpolate=True)
 
 		# Custom titles
 		if cfg['labeling']['title'] != None:
@@ -79,5 +84,5 @@ def build_figure(data, cfg):
 
 		if cfg['plotting']['ylimits'] != None:
 			ax.set_ylim(cfg['plotting']['ylimits'])
-
+		ax.grid()
 	plt.show()

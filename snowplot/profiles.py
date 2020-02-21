@@ -60,6 +60,7 @@ class GenericProfile(object):
 
         # Smooth profiles vertically
         if smoothing != None:
+            self.log.info('Smoothing with {}'.format(self.smoothing))
             df = df.rolling(window=smoothing).mean()
 
         # Check for average profile

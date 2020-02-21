@@ -22,8 +22,7 @@ def make_vertical_plot(config_file):
     """
 
     # Get the cfg
-    ucfg = get_user_config(config_file,
-    					   modules=['snowplot'])
+    ucfg = get_user_config(config_file, modules=['snowplot'])
     warnings, errors = check_config(ucfg)
 
     print_config_report(warnings, errors)
