@@ -1,12 +1,14 @@
-import matplotlib.pyplot as plt
-from inicheck.tools import get_user_config, check_config, get_checkers
-from inicheck.output import print_config_report, generate_config
-import numpy as np
 import sys
 
-from . utilities import get_logger
+import matplotlib.pyplot as plt
+import numpy as np
+
+from inicheck.output import generate_config, print_config_report
+from inicheck.tools import check_config, get_checkers, get_user_config
+
 from . import profiles
-from .plotting import  add_plot_labels, build_figure
+from .plotting import add_plot_labels, build_figure
+from .utilities import get_logger
 
 """Main module."""
 log = get_logger('snowplot')
@@ -27,8 +29,8 @@ def make_vertical_plot(config_file):
 
     print_config_report(warnings, errors)
     if len(errors) > 0:
-    	print("Errors in config file. Check report above.")
-    	sys.exit()
+        print("Errors in config file. Check report above.")
+        sys.exit()
 
     # outut a config file
     generate_config(ucfg, 'config.ini')
@@ -44,8 +46,8 @@ def make_vertical_plot(config_file):
     # Create a map of the class names to the config names
     requested_profiles = {}
     for v in cfg.keys():
-        if v not in ['output','plotting','labeling']:
-            k = v.replace('_','').lower()
+        if v not in ['output', 'plotting', 'labeling']:
+            k = v.replace('_', '').lower()
             requested_profiles[k] = v
 
     # Create the profile objects and prerpare to add them to the figure

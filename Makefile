@@ -47,8 +47,9 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-lint: ## check style with flake8
-	flake8 snowplot tests
+lint: ## check style with isort and pep8
+	isort snowplot/*.py
+	autopep8 --aggressive --in-place snowplot/*.py
 
 test: ## run tests quickly with the default Python
 	pytest

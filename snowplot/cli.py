@@ -1,7 +1,9 @@
 """Console script for snowplot."""
 import argparse
 import sys
+
 from .snowplot import make_vertical_plot
+
 
 def main():
     """Console script for snowplot."""
@@ -11,7 +13,7 @@ def main():
     args = parser.parse_args()
 
     # Provide a opportunity to look at lots
-    if args.config_file == None:
+    if args.config_file is None:
         print("Please provide a config file for plots")
         sys.exit()
 

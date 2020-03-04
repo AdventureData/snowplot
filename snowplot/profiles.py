@@ -1,9 +1,11 @@
-from .utilities import get_logger
+from os.path import abspath, basename, expanduser
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from snowmicropyn import Profile as SMP
-from os.path import abspath, expanduser, basename
-import matplotlib.pyplot as plt
+
+from .utilities import get_logger
 
 
 class GenericProfile(object):
@@ -15,10 +17,10 @@ class GenericProfile(object):
     def __init__(self, **kwargs):
 
         # Add config items as attributes
-        for k,v in kwargs.items():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
-        name = type(self).__name__.replace('Profile','')
+        name = type(self).__name__.replace('Profile', '')
         self.log = get_logger(name)
 
         self.filename = abspath(expanduser(self.filename))
@@ -31,7 +33,6 @@ class GenericProfile(object):
 
         # Zero base the plot id
         self.plot_id -= 1
-
 
     def open(self):
         """
@@ -59,7 +60,7 @@ class GenericProfile(object):
         """
 
         # Smooth profiles vertically
-        if smoothing != None:
+        if smoothing is not None:
             self.log.info('Smoothing with {}'.format(self.smoothing))
             df = df.rolling(window=smoothing).mean()
 
@@ -83,6 +84,7 @@ class GenericProfile(object):
             df: pandas dataframe
         """
         return df
+
 
 class LyteProbeProfile(GenericProfile):
     """
@@ -111,23 +113,30 @@ class LyteProbeProfile(GenericProfile):
         with open(self.filename) as fp:
             for i, line in enumerate(fp):
                 if '=' in line:
-                    k,v = line.split('=')
-                    k,v = (c.lower().strip() for c in [k,v])
+                    k, v = line.split('=')
+                    k, v = (c.lower().strip() for c in [k, v])
                     self.header_info[k] = v
                 else:
                     self.header = i
-                    self.log.debug("Header length found to be {} lines".format(i))
+                    self.log.debug(
+                        "Header length found to be {} lines".format(i))
                     break
 
             fp.close()
 
-        if 'radicl version' in  self.header_info.keys():
+        if 'radicl version' in self.header_info.keys():
             self.data_type = 'radicl'
-            columns = ['depth','sensor_1','sensor_2','sensor_3','sensor_4']
+            columns = ['depth', 'sensor_1', 'sensor_2', 'sensor_3', 'sensor_4']
 
         else:
             self.data_type = 'rad_app'
-            columns = ['sample','depth','sensor_1','sensor_2','sensor_3','sensor_4']
+            columns = [
+                'sample',
+                'depth',
+                'sensor_1',
+                'sensor_2',
+                'sensor_3',
+                'sensor_4']
 
         df = pd.read_csv(self.filename, header=self.header, names=columns)
 
@@ -138,8 +147,8 @@ class LyteProbeProfile(GenericProfile):
         Handles when to convert to cm
         """
         if self.data_type == 'rad_app':
-        	df['depth'] = np.linspace(0,-1.0 * (np.max(df['depth']) / 100.0),
-                                         len(df.index))
+            df['depth'] = np.linspace(0, -1.0 * (np.max(df['depth']) / 100.0),
+                                      len(df.index))
 
         df.set_index('depth', inplace=True)
         return df
@@ -150,6 +159,7 @@ class SnowMicroPenProfile(GenericProfile):
     A simple class reflection of the python package snowmicropyn class for
     smp measurements
     """
+
     def __init__(self, **kwargs):
         super(SnowMicroPenProfile, self).__init__(**kwargs)
         self.columns_to_plot = ['force']
@@ -171,18 +181,19 @@ class HandHardnessProfile(GenericProfile):
     A class for handling hand hardness data. Currently set for only reading a
     custom file but later will read other data
     """
+
     def __init__(self, **kwargs):
 
         # Build the numeric scale
         scale = {}
         count = 1
-        for h in ['F','4F','1F','P','K','I']:
+        for h in ['F', '4F', '1F', 'P', 'K', 'I']:
             scale[h] = count
             count += 1.0
 
             if h != 'I':
                 for b in ['-', '+']:
-                    scale['{}{}'.format(h,b)] = count
+                    scale['{}{}'.format(h, b)] = count
                     count += 1.0
         print(count)
         self.scale = scale
@@ -217,7 +228,7 @@ class HandHardnessProfile(GenericProfile):
         hardness = []
 
         # open text file
-        with open(filename,'r') as fp:
+        with open(filename, 'r') as fp:
             lines = fp.readlines()
             fp.close()
 
@@ -237,13 +248,13 @@ class HandHardnessProfile(GenericProfile):
                                      "On line #{}.".format(i))
                 # parse depth range
                 if '-' in depth_range:
-                     d = depth_range.split('-')
-                     for dv in d:
-                         depth.append(float(dv.strip()))
+                    d = depth_range.split('-')
+                    for dv in d:
+                        depth.append(float(dv.strip()))
 
                 # parse hardness scale when a range
                 if ',' in hardness_range:
-                     hv = hardness_range.split(',')
+                    hv = hardness_range.split(',')
 
                 # Single hardness value but represents two spots
                 else:
@@ -253,7 +264,7 @@ class HandHardnessProfile(GenericProfile):
                 for h in hv:
                     hardness.append(h.upper().strip())
 
-        df = pd.DataFrame(columns=['depth','hardness','numeric'])
+        df = pd.DataFrame(columns=['depth', 'hardness', 'numeric'])
 
         # Check for positive depth
         mn = min(depth)
@@ -263,15 +274,15 @@ class HandHardnessProfile(GenericProfile):
             depth = [d - mx for d in depth]
 
         # Cap the data so it looks clean
-        data = {'depth':0, 'hardness':'-', 'numeric':0}
+        data = {'depth': 0, 'hardness': '-', 'numeric': 0}
         df = df.append(data, ignore_index=True)
 
-        for d,h in zip(depth, hardness):
-            data = {'depth':d, 'hardness':h, 'numeric':self.scale[h]}
+        for d, h in zip(depth, hardness):
+            data = {'depth': d, 'hardness': h, 'numeric': self.scale[h]}
             df = df.append(data, ignore_index=True)
 
         # Cap the data so it looks good
-        data = {'depth':min(depth), 'hardness':'-', 'numeric':0}
+        data = {'depth': min(depth), 'hardness': '-', 'numeric': 0}
         df = df.append(data, ignore_index=True)
 
         return df
