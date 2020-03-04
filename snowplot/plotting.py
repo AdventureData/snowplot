@@ -26,6 +26,19 @@ def add_plot_labels(df, label_list):
 				x_val = df.loc[y_val] + 150
 				plt.annotate(label,( x_val, y_val))
 
+def add_problem_layer(ax, depth):
+	'''
+	Function for adding red lines to a plot. Given a depth, will add a plot
+
+	Args:
+		ax: matplotlib subplot axes object to add the line to
+		depth: depth in centimeters to add the line at
+	Returns:
+		ax: axes plot object with the red line added
+	'''
+	ax.plot([0,10],[depth, depth],'r')
+	# return ax
+
 def build_figure(data, cfg):
 	"""
 	Builds the final figure using the config and a dictionary of data profiles
@@ -48,41 +61,57 @@ def build_figure(data, cfg):
 	# Build (sub)plots
 	fig, axes = plt.subplots(1, nplots, figsize=fsize)
 
-	for name, profile in data.items():
-	    # Plot up the data
-		log.info("Plotting {}".format(name))
-
-		df = profile.df
-		pid = profile.plot_id
-
+	log.info("Generating {} subplots...".format(nplots))
+	for i in range(nplots):
 		if nplots > 1:
-			ax = axes[pid]
+			ax = axes[i]
 		else:
 			ax = axes
 
+		pid = i + 1
 
-		for c in profile.columns_to_plot:
-			log.debug("Adding {}.{}".format(name, c))
-			ax.plot(df[c], df[c].index, c=profile.color, label=c)
+		for name, profile in data.items():
+			if profile.plot_id == i:
+				# Plot up the data
+				log.info("Adding {} to plot #{}".format(name, pid))
+				df = profile.df
 
-			# Fill the plot
-			if profile.fill_solid:
-				ax.fill_betweenx(df.index, np.array(df[c], dtype=float), np.zeros_like(df[c].shape), facecolor=profile.color, interpolate=True)
+				# Add colums
+
+				for c in profile.columns_to_plot:
+					log.debug("Adding {}.{}".format(name, c))
+					ax.plot(df[c], df[c].index, c=profile.color, label=c)
+
+					# Fill the plot
+					if profile.fill_solid:
+						ax.fill_betweenx(df.index, np.array(df[c], dtype=float),
+						 				 np.zeros_like(df[c].shape),
+										 facecolor=profile.color,
+										 interpolate=True)
+
+		if cfg['labeling']['problem_layer'] != None:
+			depth = float(cfg['labeling']['problem_layer'][i])
+			log.info("Adding a problem layer to plot at {}...".format(depth))
+			ax.plot([0,10000],[depth, depth],'r')
 
 		# Custom titles
 		if cfg['labeling']['title'] != None:
-			title = cfg['labeling']['title'][pid].title()
+			title = cfg['labeling']['title'][i].title()
 			ax.set_title(title)
 
 		# add_plot_labels
-		ax.set_xlabel(cfg['labeling']['xlabel'][pid].title())
+		if cfg['labeling']['xlabel'] != None:
+			ax.set_xlabel(cfg['labeling']['xlabel'][i].title())
+
 		ax.set_ylabel(cfg['labeling']['ylabel'].title())
 
 		# Set limits
-		print(cfg['plotting']['xlimits'][2*pid:pid+2])
-		ax.set_xlim(cfg['plotting']['xlimits'][2*pid:2*pid+2])
+		ax.set_xlim(cfg['plotting']['xlimits'][2*i:2*i+2])
 
 		if cfg['plotting']['ylimits'] != None:
 			ax.set_ylim(cfg['plotting']['ylimits'])
+
+
 		ax.grid()
+		ax.set_axisbelow(True)
 	plt.show()
