@@ -56,7 +56,8 @@ class CheckFloatPair(CheckType):
         super(CheckFloatPair, self).__init__(**kwargs)
         self.msg_level = "error"
         self.is_list = True
-
+        self.type_func = float
+        
     def valid_length(self):
         """
         Checks to see if the length of the list is the same as the

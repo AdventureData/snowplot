@@ -75,50 +75,49 @@ def build_figure(data, cfg):
                 log.debug("Adding {}.{}".format(name, c))
                 ax.plot(df[c], df[c].index, c=profile.color, label=c)
 
-                # Fill the plot
-                if profile.fill_solid:
-                    log.debug('Applying horizontal fill to {}.{}'
-                              ''.format(name, c))
-                    ax.fill_betweenx(df.index, np.array(df[c].values, dtype=np.float),
-                                     np.zeros_like(df[c].shape),
-                                     facecolor=profile.color,
-                                     interpolate=True)
-                # Add_plot_labels
-                if profile. plot_labels != None:
-                    log.info("Adding {} annotations...".format(len(profile.plot_labels)))
-                    add_plot_labels(ax, df[c],  profile.plot_labels)
+            # Fill the plot
+            if profile.fill_solid:
+                log.debug('Applying horizontal fill to {}.{}'
+                          ''.format(name, c))
+                ax.fill_betweenx(df.index, np.array(df[c].values,dtype=np.float),
+                                 np.zeros_like(df[c].shape),
+                                 facecolor=profile.color,
+                                 interpolate=True)
+            # Add_plot_labels
+            if profile. plot_labels != None:
+                log.info("Adding {} annotations...".format(len(profile.plot_labels)))
+                add_plot_labels(ax, df[c],  profile.plot_labels)
 
-                # Create a problem layer
-                if profile.problem_layer is not None:
-                    depth = profile.problem_layer
-                    log.info("Adding a problem layer to plot at {}...".format(depth))
-                    ax.axhline(y=depth, color='r')
+            # Create a problem layer
+            if profile.problem_layer is not None:
+                depth = profile.problem_layer
+                log.info("Adding a problem layer to plot at {}...".format(depth))
+                ax.axhline(y=depth, color='r')
 
-                # Custom titles
-                if profile.title is not None:
-                    title = profile.title.title()
-                    ax.set_title(title)
+            # Custom titles
+            if profile.title is not None:
+                ax.set_title(profile.title.title())
 
-                # X axis label
-                if profile.xlabel is not None:
-                    ax.set_xlabel(profile.xlabel.title())
+            # X axis label
+            if profile.xlabel is not None:
+                ax.set_xlabel(profile.xlabel.title())
 
-                # Y axis label
-                if profile.ylabel is not None:
-                    ax.set_xlabel(profile.ylabel.title())
+            # Y axis label
+            if profile.ylabel is not None:
+                ax.set_xlabel(profile.ylabel.title())
 
-                # Set X limits
-                if profile.xlimits is not None:
-                    log.debug("Setting x limits to {}:{}".format(*profile.xlimits))
-                    ax.set_xlim(*profile.xlimits)
+            # Set X limits
+            if profile.xlimits is not None:
+                log.debug("Setting x limits to {}:{}".format(*profile.xlimits))
+                ax.set_xlim(*profile.xlimits)
+            
+            # Set y limits
+            if profile.ylimits is not None:
+                log.debug("Setting y limits to {}:{}".format(*profile.ylimits))
+                ax.set_ylim(*profile.ylimits)
 
-                # Set y limits
-                if profile.ylimits is not None:
-                    log.debug("Setting y limits to {}:{}".format(*profile.ylimits))
-                    ax.set_ylim(*profile.ylimits)
-
-                ax.grid()
-                ax.set_axisbelow(True)
+            ax.grid()
+            ax.set_axisbelow(True)
 
     if cfg['output']['show_plot']:
         plt.show()
