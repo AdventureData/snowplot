@@ -2,6 +2,8 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+from os.path import join, abspath, isdir, isfile
+from os import mkdir
 
 from inicheck.output import generate_config, print_config_report
 from inicheck.tools import check_config, get_checkers, get_user_config
@@ -9,6 +11,7 @@ from inicheck.tools import check_config, get_checkers, get_user_config
 from . import profiles
 from .plotting import add_plot_labels, build_figure
 from .utilities import get_logger
+from . import __non_data_sections__
 
 """Main module."""
 log = get_logger('snowplot')
@@ -33,7 +36,12 @@ def make_vertical_plot(config_file):
         sys.exit()
 
     # outut a config file
-    generate_config(ucfg, 'config.ini')
+    out = ucfg.cfg['output']['output_dir']
+
+    if not isdir(out):
+        mkdir(out)
+
+    generate_config(ucfg, join(out, 'config.ini'))
 
     # Grab a copy of the config dictionary
     cfg = ucfg.cfg
@@ -46,7 +54,7 @@ def make_vertical_plot(config_file):
     # Create a map of the class names to the config names
     requested_profiles = {}
     for v in cfg.keys():
-        if v not in ['output', 'plotting', 'labeling']:
+        if v not in __non_data_sections__:
             k = v.replace('_', '').lower()
             requested_profiles[k] = v
 
