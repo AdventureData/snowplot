@@ -1,6 +1,5 @@
 from os.path import abspath, basename, expanduser
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from snowmicropyn import Profile as SMP
@@ -10,7 +9,7 @@ from .utilities import get_logger
 
 class GenericProfile(object):
     """
-    Generic Class for plotting vertical profiles. Is used to stadnardize a lot
+    Generic Class for plotting vertical profiles. Is used to standardize a lot
     of data but can be used independently
     """
 
@@ -185,18 +184,8 @@ class HandHardnessProfile(GenericProfile):
     def __init__(self, **kwargs):
 
         # Build the numeric scale
-        scale = {}
-        count = 1
-        for h in ['F', '4F', '1F', 'P', 'K', 'I']:
-            scale[h] = count
-            count += 1.0
 
-            if h != 'I':
-                for b in ['-', '+']:
-                    scale['{}{}'.format(h, b)] = count
-                    count += 1.0
-        print(count)
-        self.scale = scale
+        self.scale = self._build_scale()
 
         super(HandHardnessProfile, self).__init__(**kwargs)
         self.fill_solid = True
@@ -211,6 +200,25 @@ class HandHardnessProfile(GenericProfile):
             df = df.set_index('depth')
             print(df)
         return df
+
+    def _build_scale(self):
+        """
+        Returns the mapping of characater data like F+ to a number for plotting
+        """
+        scale = {}
+        count = 1
+        for h in ['F', '4F', '1F', 'P', 'K', 'I']:
+            hv = h
+            if h != 'I':
+                for b in ['-', '', '+']:
+                    hv = '{}{}'.format(h, b)
+
+                    scale[hv] = count
+                    count += 1.0
+            else:
+                scale[hv] = count
+                count += 1.0
+        return scale
 
     def read_snowpilot(filename=None, url=None):
         pass
