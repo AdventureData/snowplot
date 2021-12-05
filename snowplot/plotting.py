@@ -1,5 +1,3 @@
-from os.path import basename
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -17,15 +15,15 @@ Args:
     log = get_logger(__name__)
 
     if label_list is not None:
-        for l in label_list:
-            if " " in l:
-                l_str = "".join([s for s in l if s not in '()'])
-                label, depth = l_str.split(">")
+        for label in label_list:
+            if " " in label:
+                l_str = "".join([s for s in label if s not in '()'])
+                final_label, depth = l_str.split(">")
                 depth = float(depth)
                 idx = (np.abs(df.index - depth)).argmin()
                 y_val = df.index[idx]
                 x_val = df.loc[y_val] + 150
-                plt.annotate(label, (x_val, y_val))
+                plt.annotate(final_label, (x_val, y_val))
 
 
 def add_problem_layer(ax, depth):
@@ -83,7 +81,7 @@ def build_figure(data, cfg):
 
                 for c in profile.columns_to_plot:
                     log.debug("Adding {}.{}".format(name, c))
-                    ax.plot(df[c], df[c].index, c=profile.color, label=c)
+                    ax.plot(df[c], df[c].index, c='gray', label=c)
 
                     # Fill the plot
                     if profile.fill_solid:

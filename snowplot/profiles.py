@@ -3,9 +3,9 @@ from os.path import abspath, basename, expanduser
 import numpy as np
 import pandas as pd
 from snowmicropyn import Profile as SMP
-
+from numpy import poly1d
 from .utilities import get_logger
-
+import matplotlib.pyplot as plt
 
 class GenericProfile(object):
     """
@@ -125,19 +125,11 @@ class LyteProbeProfile(GenericProfile):
 
         if 'radicl version' in self.header_info.keys():
             self.data_type = 'radicl'
-            columns = ['depth', 'sensor_1', 'sensor_2', 'sensor_3', 'sensor_4']
-
         else:
             self.data_type = 'rad_app'
-            columns = [
-                'sample',
-                'depth',
-                'sensor_1',
-                'sensor_2',
-                'sensor_3',
-                'sensor_4']
 
-        df = pd.read_csv(self.filename, header=self.header, names=columns)
+        names = [ll.lower() for ll in line.split(',')]
+        df = pd.read_csv(self.filename, header=self.header, names=names)
 
         return df
 
@@ -145,11 +137,34 @@ class LyteProbeProfile(GenericProfile):
         """
         Handles when to convert to cm
         """
+
         if self.data_type == 'rad_app':
             df['depth'] = np.linspace(0, -1.0 * (np.max(df['depth']) / 100.0),
                                       len(df.index))
 
+        # User requested a timeseries plot with an assumed linear depth profile
+        if hasattr(self, 'assumed_depth'):
+            if self.assumed_depth is not None:
+                self.log.info('Prescribing assumed depth of {self.assumed_depth} cm')
+                # if the user assigned a positive depth by accident
+                if self.assumed_depth > 0:
+                    self.assumed_depth *= -1
+
+                # User passed in meters
+                if abs(self.assumed_depth) < 2:
+                    self.assumed_depth *= 100
+
+                self.log.info(f'Prescribing assumed depth of {self.assumed_depth} cm')
+                df['depth'] = np.linspace(0, self.assumed_depth, len(df.index))
+
         df.set_index('depth', inplace=True)
+        df = df.sort_index()
+        if hasattr(self, 'calibration_coefficients'):
+            self.log.info(f"Applying calibration to {', '.join(self.columns_to_plot)}")
+
+            poly = poly1d(self.calibration_coefficients)
+            df[self.columns_to_plot] = poly(df[self.columns_to_plot])
+        plt.show()
         return df
 
 
