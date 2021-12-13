@@ -5,12 +5,14 @@ import pandas as pd
 from snowmicropyn import Profile as SMP
 from numpy import poly1d
 from .utilities import get_logger
-import matplotlib.pyplot as plt
 
 class GenericProfile(object):
     """
     Generic Class for plotting vertical profiles. Is used to standardize a lot
     of data but can be used independently
+
+    Attributes:
+        filename:
     """
 
     def __init__(self, **kwargs):
@@ -35,8 +37,11 @@ class GenericProfile(object):
 
         self.df = self.processing(df, **process_kw)
 
-        # Zero base the plot id
-        self.plot_id -= 1
+        # # Zero base the plot id
+        # self.plot_id -= 1
+
+        # Set Tick labels
+        self.x_ticks = None
 
     def open(self):
         """
@@ -211,13 +216,16 @@ class HandHardnessProfile(GenericProfile):
 
     def __init__(self, **kwargs):
 
+        text_scale = ['F', '4F', '1F', 'P', 'K', 'I']
         # Build the numeric scale
-
         self.scale = self._build_scale()
 
         super(HandHardnessProfile, self).__init__(**kwargs)
         self.fill_solid = True
         self.columns_to_plot = ['numeric']
+
+        # Alternate labels to use for x_tick
+        self.x_ticks = text_scale
 
     def open(self):
         self.log.info("Opening filename {}".format(basename(self.filename)))

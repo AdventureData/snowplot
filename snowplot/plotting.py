@@ -25,6 +25,7 @@ Args:
                 x_val = series.loc[y_val]
                 ax.annotate(final_label, (x_val, y_val), xytext=(x_val * 1.5, y_val*0.5), arrowprops={'arrowstyle':'->'})
 
+
 def add_problem_layer(ax, depth):
     '''
     Function for adding red lines to a plot. Given a depth, will add a plot
@@ -32,11 +33,8 @@ def add_problem_layer(ax, depth):
     Args:
             ax: matplotlib subplot axes object to add the line to
             depth: depth in centimeters to add the line at
-    Returns:
-            ax: axes plot object with the red line added
     '''
-    ax.plot([0, 10], [depth, depth], 'r')
-    # return ax
+    ax.axhline(y=depth, color='r')
 
 
 def build_figure(data, cfg):
@@ -55,7 +53,8 @@ def build_figure(data, cfg):
     fsize = np.array(cfg['output']['figure_size'])
 
     # Expands the size in the x dir for each plot
-    nplots = cfg['plotting']['num_subplots']
+    plot_sections = [s for s in cfg.keys() if s not in __non_data_sections__]
+    nplots = len(plot_sections)
     fsize[0] = fsize[0] * nplots
 
     # Build (sub)plots
@@ -68,64 +67,60 @@ def build_figure(data, cfg):
         else:
             ax = axes
 
-        pid = i + 1
-
         for name, profile in data.items():
-            if profile.plot_id == i:
-                # Plot up the data
-                log.info("Adding {} to plot #{}".format(name, pid))
-                df = profile.df
+            # Plot up the data
+            df = profile.df
 
-                # Add colums
+            # Add colums
+            for c in profile.columns_to_plot:
+                log.debug("Adding {}.{}".format(name, c))
+                ax.plot(df[c], df[c].index, c=profile.color, label=c)
 
-                for c in profile.columns_to_plot:
-                    log.debug("Adding {}.{}".format(name, c))
-                    ax.plot(df[c], df[c].index, c='gray', label=c, linewidth=0.5)
+            # Fill the plot
+            if profile.fill_solid:
+                log.debug('Applying horizontal fill to {}.{}'
+                          ''.format(name, c))
+                ax.fill_betweenx(df.index, np.array(df[c].values, dtype=np.float),
+                                 np.zeros_like(df[c].shape),
+                                 facecolor=profile.color,
+                                 interpolate=True)
+            # Add_plot_labels
+            if profile.plot_labels is not None:
+                log.info("Adding {} annotations...".format(len(profile.plot_labels)))
+                add_plot_labels(ax, df[c],  profile.plot_labels)
 
-                    # Fill the plot
-                    if profile.fill_solid:
-                        log.debug('Applying horizontal fill to {}.{}'
-                                  ''.format(name, c))
-                        ax.fill_betweenx(df.index, np.array(df[c], dtype=float),
-                                         np.zeros_like(df[c].shape),
-                                         facecolor=profile.color,
-                                         interpolate=True)
+            # Create a problem layer
+            if profile.problem_layer is not None:
+                depth = profile.problem_layer
+                log.info("Adding a problem layer to plot at {}...".format(depth))
+                ax.axhline(y=depth, color='r')
 
-        if cfg['labeling']['problem_layer'] is not None:
-            depth = float(cfg['labeling']['problem_layer'][i])
-            log.info("Adding a problem layer to plot at {}...".format(depth))
-            ax.plot([0, 10000], [depth, depth], 'r')
+            # Custom titles
+            if profile.title is not None:
+                ax.set_title(profile.title.title())
 
-        # Custom titles
-        title = None
-        if cfg['labeling']['use_filename_title']:
-            log.info(f'Using filename for title in {profile.name} figure')
-            title = basename(profile.filename)
+            # X axis label
+            if profile.xlabel is not None:
+                ax.set_xlabel(profile.xlabel.title())
 
-        elif cfg['labeling']['title'] is not None:
-            title = cfg['labeling']['title'][i].title()
+            # Y axis label
+            if profile.ylabel is not None:
+                ax.set_xlabel(profile.ylabel.title())
 
-        if title is not None:
-            ax.set_title(title)
+            # Set X limits
+            if profile.xlimits is not None:
+                log.debug("Setting x limits to {}:{}".format(*profile.xlimits))
+                ax.set_xlim(*profile.xlimits)
 
-        # add_plot_labels
-        if cfg['labeling']['xlabel'] is not None:
-            ax.set_xlabel(cfg['labeling']['xlabel'][i].title())
+            # Set y limits
+            if profile.ylimits is not None:
+                log.debug("Setting y limits to {}:{}".format(*profile.ylimits))
+                ax.set_ylim(*profile.ylimits)
 
-        ax.set_ylabel(cfg['labeling']['ylabel'].title())
-
-        # Set limits
-        ax.set_xlim(cfg['plotting']['xlimits'][2 * i:2 * i + 2])
-
-        if cfg['plotting']['ylimits'] is not None:
-            ax.set_ylim(cfg['plotting']['ylimits'])
-
-        # Add annotations
-        if cfg['labeling']['plot_labels'] is not None:
-            add_plot_labels(ax, df[profile.columns_to_plot], label_list=cfg['labeling']['plot_labels'])
-
-        ax.grid()
-        ax.set_axisbelow(True)
+            if profile.plot_labels is not None:
+                add_plot_labels(ax, profile.df[profile.columns_to_plot], profile.plot_labels)
+            ax.grid()
+            ax.set_axisbelow(True)
 
     if cfg['output']['filename'] is not None:
         log.info(f"Saving figure to {cfg['output']['filename']}")

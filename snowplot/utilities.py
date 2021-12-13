@@ -46,36 +46,27 @@ def getConfigHeader():
     return cfg_str
 
 
-class CheckNumPlotLength(CheckType):
+class CheckFloatPair(CheckType):
     """
     Check to see if the list provided is the same length as the number of plots
     being requested
     """
 
     def __init__(self, **kwargs):
-        super(CheckNumPlotLength, self).__init__(**kwargs)
-        self.context_value = kwargs['config'].cfg['plotting']['num_subplots']
+        super(CheckFloatPair, self).__init__(**kwargs)
         self.msg_level = "error"
         self.is_list = True
-        self.is_pair = False
-
+        self.type_func = float
+        
     def valid_length(self):
         """
         Checks to see if the length of the list is the same as the
         number of plots requested
         """
-        valid = len(self.values) == self.context_value
-        msg = None
+        valid = len(self.values) == 2
+        msg = "Must be a list of pairs the same length as subplots ({})".format(
+            2)
 
-        if not valid:
-            if self.is_pair:
-                valid = len(self.values) == 2 * self.context_value
-                msg = "Must be a list of pairs the same length as subplots ({})".format(
-                    self.context_value)
-            else:
-                valid = len(self.values) == self.context_value
-                msg = "Must be same length as number of subplots ({})".format(
-                    self.context_value)
 
         return valid, msg
 
@@ -97,25 +88,3 @@ class CheckNumPlotLength(CheckType):
             valid, msg = self.valid_length()
 
         return valid, msg
-
-
-class CheckNumPlotLengthFloat(CheckNumPlotLength):
-    """
-    Check to see if the list provided is the same length as the number of plots
-    being requested
-    """
-
-    def __init__(self, **kwargs):
-        super(CheckNumPlotLengthFloat, self).__init__(**kwargs)
-        self.type_func = float
-
-
-class CheckNumPlotLengthFloatPair(CheckNumPlotLengthFloat):
-    """
-    Check to see if the list provided is the same length as the number of plots
-    being requested
-    """
-
-    def __init__(self, **kwargs):
-        super(CheckNumPlotLengthFloatPair, self).__init__(**kwargs)
-        self.is_pair = True
