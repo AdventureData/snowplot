@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .utilities import get_logger
-from os.path import basename
+from . import __non_data_sections__
 
-def add_plot_labels(ax, series, label_list):
+def add_plot_annotations(ax, series, label_list):
     """
 Adds labels to a plot.
 e.g.  (surface? > -10) places a label at -10 that says surface
@@ -87,7 +87,7 @@ def build_figure(data, cfg):
             # Add_plot_labels
             if profile.plot_labels is not None:
                 log.info("Adding {} annotations...".format(len(profile.plot_labels)))
-                add_plot_labels(ax, df[c],  profile.plot_labels)
+                add_plot_annotations(ax, df[c],  profile.plot_labels)
 
             # Create a problem layer
             if profile.problem_layer is not None:
@@ -105,7 +105,7 @@ def build_figure(data, cfg):
 
             # Y axis label
             if profile.ylabel is not None:
-                ax.set_xlabel(profile.ylabel.title())
+                ax.set_ylabel(profile.ylabel.title())
 
             # Set X limits
             if profile.xlimits is not None:
@@ -117,8 +117,6 @@ def build_figure(data, cfg):
                 log.debug("Setting y limits to {}:{}".format(*profile.ylimits))
                 ax.set_ylim(*profile.ylimits)
 
-            if profile.plot_labels is not None:
-                add_plot_labels(ax, profile.df[profile.columns_to_plot], profile.plot_labels)
             ax.grid()
             ax.set_axisbelow(True)
 
