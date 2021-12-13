@@ -2,12 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .utilities import get_logger
+from os.path import basename
 
-
-def add_plot_labels(df, label_list):
+def add_plot_labels(ax, series, label_list):
     """
 Adds labels to a plot.
-
+e.g.  (surface? > -10) places a label at -10 that says surface
 Args:
     df: pandas dataframe in which the index is the y axis of the plot
     label_list: a list of labels in the format of [(<label> > <depth>),]
@@ -20,11 +20,10 @@ Args:
                 l_str = "".join([s for s in label if s not in '()'])
                 final_label, depth = l_str.split(">")
                 depth = float(depth)
-                idx = (np.abs(df.index - depth)).argmin()
-                y_val = df.index[idx]
-                x_val = df.loc[y_val] + 150
-                plt.annotate(final_label, (x_val, y_val))
-
+                idx = (np.abs(series.index - depth)).argmin()
+                y_val = series.index[idx]
+                x_val = series.loc[y_val]
+                ax.annotate(final_label, (x_val, y_val), xytext=(x_val * 1.5, y_val*0.5), arrowprops={'arrowstyle':'->'})
 
 def add_problem_layer(ax, depth):
     '''
@@ -98,8 +97,15 @@ def build_figure(data, cfg):
             ax.plot([0, 10000], [depth, depth], 'r')
 
         # Custom titles
-        if cfg['labeling']['title'] is not None:
+        title = None
+        if cfg['labeling']['use_filename_title']:
+            log.info(f'Using filename for title in {profile.name} figure')
+            title = basename(profile.filename)
+
+        elif cfg['labeling']['title'] is not None:
             title = cfg['labeling']['title'][i].title()
+
+        if title is not None:
             ax.set_title(title)
 
         # add_plot_labels
@@ -113,6 +119,10 @@ def build_figure(data, cfg):
 
         if cfg['plotting']['ylimits'] is not None:
             ax.set_ylim(cfg['plotting']['ylimits'])
+
+        # Add annotations
+        if cfg['labeling']['plot_labels'] is not None:
+            add_plot_labels(ax, df[profile.columns_to_plot], label_list=cfg['labeling']['plot_labels'])
 
         ax.grid()
         ax.set_axisbelow(True)

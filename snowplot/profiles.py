@@ -19,8 +19,8 @@ class GenericProfile(object):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-        name = type(self).__name__.replace('Profile', '')
-        self.log = get_logger(name)
+        self.name = type(self).__name__.replace('Profile', '')
+        self.log = get_logger(self.name)
 
         self.filename = abspath(expanduser(self.filename))
 
