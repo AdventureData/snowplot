@@ -28,7 +28,12 @@ class GenericProfile(object):
         self.header = 0
 
         df = self.open()
-        self.df = self.processing(df)
+        process_kw = {}
+        for kw in ['smoothing', 'average_columns']:
+            if hasattr(self, kw):
+                process_kw[kw] = getattr(self, kw)
+
+        self.df = self.processing(df, **process_kw)
 
         # Zero base the plot id
         self.plot_id -= 1
@@ -57,10 +62,9 @@ class GenericProfile(object):
         Returns:
             df: Pandas dataframe
         """
-
         # Smooth profiles vertically
         if smoothing is not None:
-            self.log.info('Smoothing with {}'.format(self.smoothing))
+            self.log.info('Smoothing with {} point window'.format(self.smoothing))
             df = df.rolling(window=smoothing).mean()
 
         # Check for average profile
@@ -143,19 +147,23 @@ class LyteProbeProfile(GenericProfile):
                                       len(df.index))
 
         # User requested a timeseries plot with an assumed linear depth profile
-        if hasattr(self, 'assumed_depth'):
-            if self.assumed_depth is not None:
-                self.log.info('Prescribing assumed depth of {self.assumed_depth} cm')
-                # if the user assigned a positive depth by accident
-                if self.assumed_depth > 0:
-                    self.assumed_depth *= -1
+        if self.assumed_depth is not None:
+            self.log.info('Prescribing assumed depth of {self.assumed_depth} cm')
+            # if the user assigned a positive depth by accident
+            if self.assumed_depth > 0:
+                self.assumed_depth *= -1
 
-                # User passed in meters
-                if abs(self.assumed_depth) < 2:
-                    self.assumed_depth *= 100
+            # User passed in meters
+            if abs(self.assumed_depth) < 2:
+                self.assumed_depth *= 100
 
-                self.log.info(f'Prescribing assumed depth of {self.assumed_depth} cm')
-                df['depth'] = np.linspace(0, self.assumed_depth, len(df.index))
+            self.log.info(f'Prescribing assumed depth of {self.assumed_depth} cm')
+            df['depth'] = np.linspace(0, self.assumed_depth, len(df.index))
+
+        # Shift snow surface to 0 cm
+        df['depth'] = df['depth'] - self.surface_depth
+        if self.bottom_depth is not None:
+            df = df.loc[0:self.bottom_depth]
 
         df.set_index('depth', inplace=True)
         df = df.sort_index()
@@ -164,7 +172,6 @@ class LyteProbeProfile(GenericProfile):
 
             poly = poly1d(self.calibration_coefficients)
             df[self.columns_to_plot] = poly(df[self.columns_to_plot])
-        plt.show()
         return df
 
 
@@ -184,12 +191,18 @@ class SnowMicroPenProfile(GenericProfile):
         ts = p.timestamp
         coords = p.coordinates
         df = p.samples
-
-        df['depth'] = df['distance'].div(-10)
-        df = df.set_index('depth')
         return df
 
 
+    def additional_processing(self, df):
+        # Convert into CM from MM and set 0 at the start
+        self.log.info('Converting `distance` to cm and setting top to 0...')
+        df['depth'] = df['distance'].div(-10)
+        df = df.set_index('depth')
+        df = df.sort_index()
+        self.log.info('Converting N into mN...')
+        df['force'] = df['force'].mul(1000)  #Put into millinewtons
+        return df
 class HandHardnessProfile(GenericProfile):
     """
     A class for handling hand hardness data. Currently set for only reading a
@@ -213,7 +226,6 @@ class HandHardnessProfile(GenericProfile):
         if self.filename.split('.')[-1] == 'txt':
             df = self.read_simple_text(self.filename)
             df = df.set_index('depth')
-            print(df)
         return df
 
     def _build_scale(self):

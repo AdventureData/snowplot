@@ -33,7 +33,7 @@ def make_vertical_plot(config_file):
         sys.exit()
 
     # outut a config file
-    generate_config(ucfg, 'config.ini')
+    generate_config(ucfg, 'config_full.ini')
 
     # Grab a copy of the config dictionary
     cfg = ucfg.cfg

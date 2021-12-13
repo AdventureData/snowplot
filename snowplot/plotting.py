@@ -81,7 +81,7 @@ def build_figure(data, cfg):
 
                 for c in profile.columns_to_plot:
                     log.debug("Adding {}.{}".format(name, c))
-                    ax.plot(df[c], df[c].index, c='gray', label=c)
+                    ax.plot(df[c], df[c].index, c='gray', label=c, linewidth=0.5)
 
                     # Fill the plot
                     if profile.fill_solid:
@@ -116,4 +116,10 @@ def build_figure(data, cfg):
 
         ax.grid()
         ax.set_axisbelow(True)
-    plt.show()
+
+    if cfg['output']['filename'] is not None:
+        log.info(f"Saving figure to {cfg['output']['filename']}")
+        plt.savefig(cfg['output']['filename'])
+
+    if cfg['output']['show_plot']:
+        plt.show()
