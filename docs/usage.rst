@@ -1,7 +1,6 @@
 =====
 Usage
 =====
+To use snowplot from the commandline::
 
-To use snowplot in a project::
-
-    import snowplot
+    snowplot config.ini

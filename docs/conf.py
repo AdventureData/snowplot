@@ -22,6 +22,12 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 
 import snowplot
+from inicheck.tools import config_documentation
+import datetime
+
+# Auto Document the config file.
+config_documentation('./auto_config.rst', modules='snowplot')
+
 
 # -- General configuration ---------------------------------------------
 
@@ -47,8 +53,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'snowplot'
-copyright = "2020, Micah Johnson"
-author = "Micah Johnson"
+copyright = u"{}, Micah Johnson".format(datetime.datetime.now().year)
+author = u"Micah Johnson"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout

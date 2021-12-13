@@ -8,6 +8,7 @@ Welcome to snowplot's documentation!
    readme
    installation
    usage
+   master_config
    modules
    contributing
    authors

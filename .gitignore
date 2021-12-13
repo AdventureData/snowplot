@@ -107,3 +107,8 @@ ENV/
 
 # Outputs
 **/output/**
+
+#docs 
+docs/snowplot.rst
+docs/modules.rst
+docs/auto_config.rst
