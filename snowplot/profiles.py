@@ -21,6 +21,11 @@ class GenericProfile(object):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+        if self.use_filename_title:
+            self.title = basename(self.filename)
+        else:
+            self.title = title.title()
+
         self.name = type(self).__name__.replace('Profile', '')
         self.log = get_logger(self.name)
 
@@ -263,6 +268,7 @@ class HandHardnessProfile(GenericProfile):
         Reads in a text file containing only hardness information
         Format is in depth1-depth2:hardness_value
         Args:
+            filname: path to the text file
             filname: path to the text file
         Returns:
             df: pandas dataframe

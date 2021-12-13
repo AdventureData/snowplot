@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from os.path import join
 
 from .utilities import get_logger
 from . import __non_data_sections__
@@ -97,7 +98,7 @@ def build_figure(data, cfg):
 
             # Custom titles
             if profile.title is not None:
-                ax.set_title(profile.title.title())
+                ax.set_title(profile.title)
 
             # X axis label
             if profile.xlabel is not None:
@@ -122,7 +123,7 @@ def build_figure(data, cfg):
 
     if cfg['output']['filename'] is not None:
         log.info(f"Saving figure to {cfg['output']['filename']}")
-        plt.savefig(cfg['output']['filename'])
+        plt.savefig(join(cfg['output']['output_dir'], cfg['output']['filename']))
 
     if cfg['output']['show_plot']:
         plt.show()
