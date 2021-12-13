@@ -18,6 +18,6 @@ __config_checkers__ = 'utilities'
 
 __author__ = """Micah Johnson"""
 __email__ = 'micah.johnson150@gmail.com'
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 __non_data_sections__ = ['output']

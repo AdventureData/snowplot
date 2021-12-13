@@ -7,7 +7,7 @@ import coloredlogs
 from inicheck.checkers import CheckType
 from inicheck.utilities import is_valid
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
 def get_logger(name, level='DEBUG', ext_logger=None):
