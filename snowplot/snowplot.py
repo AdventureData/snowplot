@@ -7,7 +7,7 @@ from os import mkdir
 
 from inicheck.output import generate_config, print_config_report
 from inicheck.tools import check_config, get_checkers, get_user_config
-
+from collections import OrderedDict
 from . import profiles
 from .plotting import build_figure
 from .utilities import get_logger
@@ -42,18 +42,16 @@ def make_vertical_plot(config_file):
         mkdir(out)
     generate_config(ucfg, join(out, 'config_full.ini'))
 
-
-
     # Grab a copy of the config dictionary
     cfg = ucfg.cfg
     data = {}
 
     # gather all the templates for creating profiles
     profile_classes = get_checkers(module='snowplot.profiles',
-                                          keywords='profile')
+                                   keywords='profile')
 
     # Create a map of the class names to the config names
-    requested_profiles = {}
+    requested_profiles = OrderedDict()
     for v in cfg.keys():
         if v not in __non_data_sections__:
             k = v.replace('_', '').lower()

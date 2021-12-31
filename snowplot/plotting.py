@@ -5,6 +5,7 @@ from os.path import join
 from .utilities import get_logger
 from . import __non_data_sections__
 
+
 def add_plot_annotations(ax, series, label_list):
     """
 Adds labels to a plot.
@@ -24,17 +25,18 @@ Args:
                 idx = (np.abs(series.index - depth)).argmin()
                 y_val = series.index[idx]
                 x_val = series.loc[y_val]
-                ax.annotate(final_label, (x_val, y_val), xytext=(x_val * 1.5, y_val*0.5), arrowprops={'arrowstyle':'->'})
+                ax.annotate(final_label, (x_val, y_val), xytext=(x_val * 1.5, y_val * 0.5),
+                            arrowprops={'arrowstyle': '->'})
 
 
 def add_problem_layer(ax, depth):
-    '''
+    """
     Function for adding red lines to a plot. Given a depth, will add a plot
 
     Args:
             ax: matplotlib subplot axes object to add the line to
             depth: depth in centimeters to add the line at
-    '''
+    """
     ax.axhline(y=depth, color='r')
 
 
@@ -63,12 +65,12 @@ def build_figure(data, cfg):
 
     log.info("Generating {} subplots...".format(nplots))
     for i in range(nplots):
-        if nplots > 1:
-            ax = axes[i]
-        else:
-            ax = axes
-
         for name, profile in data.items():
+            if nplots > 1:
+                ax = axes[profile.plot_id-1]
+            else:
+                ax = axes
+
             # Plot up the data
             df = profile.df
 
@@ -88,7 +90,7 @@ def build_figure(data, cfg):
             # Add_plot_labels
             if profile.plot_labels is not None:
                 log.info("Adding {} annotations...".format(len(profile.plot_labels)))
-                add_plot_annotations(ax, df[c],  profile.plot_labels)
+                add_plot_annotations(ax, df[c], profile.plot_labels)
 
             # Create a problem layer
             if profile.problem_layer is not None:

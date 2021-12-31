@@ -24,7 +24,7 @@ class GenericProfile(object):
         if self.use_filename_title:
             self.title = basename(self.filename)
         else:
-            self.title = title.title()
+            self.title = self.title.title()
 
         self.name = type(self).__name__.replace('Profile', '')
         self.log = get_logger(self.name)
@@ -42,7 +42,7 @@ class GenericProfile(object):
 
         self.df = self.processing(df, **process_kw)
 
-        # # Zero base the plot id
+        # Zero base the plot id
         # self.plot_id -= 1
 
         # Set Tick labels
@@ -142,9 +142,8 @@ class LyteProbeProfile(GenericProfile):
         else:
             self.data_type = 'rad_app'
 
-        names = [ll.lower() for ll in line.split(',')]
+        names = [ll.lower().strip() for ll in line.split(',')]
         df = pd.read_csv(self.filename, header=self.header, names=names)
-
         return df
 
     def additional_processing(self, df):
@@ -158,7 +157,7 @@ class LyteProbeProfile(GenericProfile):
 
         # User requested a timeseries plot with an assumed linear depth profile
         if self.assumed_depth is not None:
-            self.log.info('Prescribing assumed depth of {self.assumed_depth} cm')
+            self.log.info(f'Prescribing assumed depth of {self.assumed_depth} cm')
             # if the user assigned a positive depth by accident
             if self.assumed_depth > 0:
                 self.assumed_depth *= -1
@@ -177,11 +176,14 @@ class LyteProbeProfile(GenericProfile):
 
         df.set_index('depth', inplace=True)
         df = df.sort_index()
+        df[self.columns_to_plot] = df[self.columns_to_plot].astype(float)
         if hasattr(self, 'calibration_coefficients'):
-            self.log.info(f"Applying calibration to {', '.join(self.columns_to_plot)}")
+            if self.calibration_coefficients is not None:
+                self.log.info(f"Applying calibration to {', '.join(self.columns_to_plot)}")
 
-            poly = poly1d(self.calibration_coefficients)
-            df[self.columns_to_plot] = poly(df[self.columns_to_plot])
+                poly = poly1d(self.calibration_coefficients)
+                df[self.columns_to_plot] = poly(df[self.columns_to_plot])
+
         return df
 
 
@@ -313,7 +315,7 @@ class HandHardnessProfile(GenericProfile):
                 for h in hv:
                     hardness.append(h.upper().strip())
 
-        df = pd.DataFrame(columns=['depth', 'hardness', 'numeric'])
+        df = pd.DataFrame()
 
         # Check for positive depth
         mn = min(depth)
