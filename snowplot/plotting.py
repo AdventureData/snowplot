@@ -113,12 +113,12 @@ def build_figure(data, cfg):
             # Set X limits
             if profile.xlimits is not None:
                 log.debug("Setting x limits to {}:{}".format(*profile.xlimits))
-                ax.set_xlim(*profile.xlimits)
+                ax.set_xlim(*sorted(profile.xlimits))
 
             # Set y limits
             if profile.ylimits is not None:
                 log.debug("Setting y limits to {}:{}".format(*profile.ylimits))
-                ax.set_ylim(*profile.ylimits)
+                ax.set_ylim(*sorted(profile.ylimits))
 
             ax.grid()
             ax.set_axisbelow(True)
