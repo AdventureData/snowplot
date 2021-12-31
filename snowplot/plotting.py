@@ -14,17 +14,15 @@ Args:
     label_list: a list of labels in the format of [(<label> > <depth>),]
     """
     log = get_logger(__name__)
-
     if label_list is not None:
         for label in label_list:
-            if " " in label:
-                l_str = "".join([s for s in label if s not in '()'])
-                final_label, depth = l_str.split(">")
-                depth = float(depth)
+            if ">" in label:
+                final_label, depth = label.replace('(', '').replace(')', '').split(">")
+                depth = float(depth.strip())
                 idx = (np.abs(series.index - depth)).argmin()
                 y_val = series.index[idx]
-                x_val = series.loc[y_val]
-                ax.annotate(final_label, (x_val, y_val), xytext=(x_val * 1.5, y_val * 0.5),
+                x_val = series.loc[y_val].max()
+                ax.annotate(final_label, (x_val, y_val), xytext=(x_val * 1.1, y_val + (abs(y_val)*0.1)),
                             arrowprops={'arrowstyle': '->'})
 
 

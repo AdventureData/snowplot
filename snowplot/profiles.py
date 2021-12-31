@@ -17,6 +17,7 @@ class GenericProfile(object):
     """
 
     def __init__(self, **kwargs):
+
         # Set Tick labels
         self.x_ticks = None
         self.column_to_plot = None
