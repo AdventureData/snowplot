@@ -5,7 +5,6 @@ from os.path import join
 from .utilities import get_logger
 from . import __non_data_sections__
 
-
 def add_plot_annotations(ax, series, label_list):
     """
 Adds labels to a plot.
@@ -67,7 +66,7 @@ def build_figure(data, cfg):
     for i in range(nplots):
         for name, profile in data.items():
             if nplots > 1:
-                ax = axes[profile.plot_id-1]
+                ax = axes[profile.plot_id]
             else:
                 ax = axes
 
@@ -75,17 +74,23 @@ def build_figure(data, cfg):
             df = profile.df
 
             # Add colums
-            for c in profile.columns_to_plot:
-                log.debug("Adding {}.{}".format(name, c))
-                ax.plot(df[c], df[c].index, c=profile.color, label=c)
+            c = profile.column_to_plot
+            log.debug("Adding {}.{}".format(name, c))
+            if profile.is_layered_data:
+                plot_data = profile.get_layered_profile()
+            else:
+                plot_data = df
+            plot_data = plot_data.reset_index()
+            ax.plot(plot_data[c], plot_data['depth'], c=profile.line_color, label=c)
 
             # Fill the plot
             if profile.fill_solid:
                 log.debug('Applying horizontal fill to {}.{}'
                           ''.format(name, c))
-                ax.fill_betweenx(df.index, np.array(df[c].values, dtype=np.float),
+
+                ax.fill_betweenx(df.index, df[c].astype(float),
                                  np.zeros_like(df[c].shape),
-                                 facecolor=profile.color,
+                                 facecolor=profile.fill_color,
                                  interpolate=True)
             # Add_plot_labels
             if profile.plot_labels is not None:
@@ -112,13 +117,15 @@ def build_figure(data, cfg):
 
             # Set X limits
             if profile.xlimits is not None:
-                log.debug("Setting x limits to {}:{}".format(*profile.xlimits))
-                ax.set_xlim(*sorted(profile.xlimits))
+                lims = sorted(profile.ylimits)
+                log.debug("Setting x limits to {}:{}".format(*lims))
+                ax.set_xlim(*lims)
 
             # Set y limits
             if profile.ylimits is not None:
-                log.debug("Setting y limits to {}:{}".format(*profile.ylimits))
-                ax.set_ylim(*sorted(profile.ylimits))
+                lims = sorted(profile.ylimits)
+                log.debug("Setting y limits to {}:{}".format(*lims))
+                ax.set_ylim(*lims)
 
             ax.grid()
             ax.set_axisbelow(True)

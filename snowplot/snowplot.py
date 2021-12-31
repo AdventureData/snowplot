@@ -63,7 +63,7 @@ def make_vertical_plot(config_file):
         if profile_name in requested_profiles.keys():
             name = requested_profiles[profile_name]
             log.info("Building {} profile".format(name))
-            # Add it to our dictionary of data
+            # Add it to the dictionary of data
             data[profile_name] = cls(**cfg[name])
 
     # Build the final figure
