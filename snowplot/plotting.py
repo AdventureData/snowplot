@@ -79,7 +79,7 @@ def build_figure(data, cfg):
             if profile.is_layered_data:
                 plot_data = profile.get_layered_profile()
             else:
-                plot_data = df
+                plot_data = profile.df
             plot_data = plot_data.reset_index()
             ax.plot(plot_data[c], plot_data['depth'], c=profile.line_color, label=c, linewidth=0.1)
 
@@ -89,7 +89,7 @@ def build_figure(data, cfg):
                           ''.format(name, c))
 
                 ax.fill_betweenx(df.index, df[c].astype(float),
-                                 np.zeros_like(df[c].shape),
+                                 np.ones_like(df[c].shape)*plot_data[c].min(),
                                  facecolor=profile.fill_color,
                                  interpolate=True)
             # Add_plot_labels
@@ -110,10 +110,13 @@ def build_figure(data, cfg):
             # X axis label
             if profile.xlabel is not None:
                 ax.set_xlabel(profile.xlabel.title())
-                if profile.name == 'HandHardness':
-                    print('here')
-                    ax.set_xticks([profile.scale[ll] for ll in profile._text_scale])
-                    ax.set_xticklabels(profile._text_scale)
+
+            # handle xticks
+            if profile.name == 'HandHardness':
+                ax.set_xticks([profile.scale[ll] for ll in profile._text_scale])
+                ax.set_xticklabels(profile._text_scale)
+            if profile.remove_xticks:
+                ax.set_xticklabels([])
 
             # Y axis label
             if profile.ylabel is not None:
@@ -121,7 +124,7 @@ def build_figure(data, cfg):
 
             # Set X limits
             if profile.xlimits is not None:
-                lims = sorted(profile.ylimits)
+                lims = sorted(profile.xlimits)
                 log.debug("Setting x limits to {}:{}".format(*lims))
                 ax.set_xlim(*lims)
 

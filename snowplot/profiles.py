@@ -80,7 +80,6 @@ class GenericProfile(object):
         if smoothing is not None:
             self.log.info('Smoothing with {} point window'.format(self.smoothing))
             df = df.rolling(window=smoothing).mean()
-
         # Check for average profile
         if average_columns:
             df['average'] = df.mean(axis=1)
@@ -174,6 +173,7 @@ class LyteProbeProfile(GenericProfile):
 
         # Shift snow surface to 0 cm
         df['depth'] = df['depth'] - self.surface_depth
+
         if self.bottom_depth is not None:
             df = df.loc[0:self.bottom_depth]
 
@@ -181,9 +181,10 @@ class LyteProbeProfile(GenericProfile):
         df = df.sort_index()
 
         df[self.column_to_plot] = df[self.column_to_plot].astype(float)
+
         if hasattr(self, 'calibration_coefficients'):
             if self.calibration_coefficients is not None:
-                self.log.info(f"Applying calibration to {', '.join(self.column_to_plot)}")
+                self.log.info(f"Applying calibration to {self.column_to_plot}")
 
                 poly = poly1d(self.calibration_coefficients)
                 df[self.column_to_plot] = poly(df[self.column_to_plot])
