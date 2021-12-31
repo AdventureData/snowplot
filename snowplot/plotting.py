@@ -81,7 +81,7 @@ def build_figure(data, cfg):
             else:
                 plot_data = df
             plot_data = plot_data.reset_index()
-            ax.plot(plot_data[c], plot_data['depth'], c=profile.line_color, label=c)
+            ax.plot(plot_data[c], plot_data['depth'], c=profile.line_color, label=c, linewidth=0.1)
 
             # Fill the plot
             if profile.fill_solid:
@@ -110,6 +110,10 @@ def build_figure(data, cfg):
             # X axis label
             if profile.xlabel is not None:
                 ax.set_xlabel(profile.xlabel.title())
+                if profile.name == 'HandHardness':
+                    print('here')
+                    ax.set_xticks([profile.scale[ll] for ll in profile._text_scale])
+                    ax.set_xticklabels(profile._text_scale)
 
             # Y axis label
             if profile.ylabel is not None:
