@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from snowmicropyn import Profile as SMP
 from numpy import poly1d
-from .utilities import get_logger
+from .utilities import get_logger, titlize
 
 
 class GenericProfile(object):
@@ -30,8 +30,9 @@ class GenericProfile(object):
 
         if self.use_filename_title:
             self.title = basename(self.filename)
-        else:
-            self.title = self.title.title()
+
+        elif self.title is not None:
+            self.title = titlize(self.title)
 
         self.name = type(self).__name__.replace('Profile', '')
         self.log = get_logger(self.name)
@@ -207,6 +208,8 @@ class SnowMicroPenProfile(GenericProfile):
         self.log.info("Opening filename {}".format(basename(self.filename)))
         p = SMP.load(self.filename)
         ts = p.timestamp
+        t_str = ts.strftime('%H:%M:%S')
+        self.log.info(f"Profile was recorded at {t_str} {ts.tzinfo}")
         coords = p.coordinates
         df = p.samples
         return df
@@ -214,7 +217,7 @@ class SnowMicroPenProfile(GenericProfile):
     def additional_processing(self, df):
         # Convert into CM from MM and set 0 at the start
         self.log.info('Converting `distance` to cm and setting top to 0...')
-        df['depth'] = df['distance'].div(-10)
+        df['depth'] = df['distance'].div(-1)
         df = df.set_index('depth')
         df = df.sort_index()
         self.log.info('Converting N into mN...')

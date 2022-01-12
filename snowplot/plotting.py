@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from os.path import join
 
-from .utilities import get_logger
+from .utilities import get_logger, titlize
 from . import __non_data_sections__
 
 def add_plot_annotations(ax, series, label_list):
@@ -77,7 +77,7 @@ def build_figure(data, cfg):
             if profile.is_layered_data:
                 plot_data = profile.get_layered_profile()
             else:
-                plot_data = profile.df
+                plot_data = df
             plot_data = plot_data.reset_index()
             ax.plot(plot_data[c], plot_data['depth'], c=profile.line_color, label=c, linewidth=0.1)
 
@@ -86,7 +86,7 @@ def build_figure(data, cfg):
                 log.debug('Applying horizontal fill to {}.{}'
                           ''.format(name, c))
 
-                ax.fill_betweenx(df.index, df[c].astype(float),
+                ax.fill_betweenx(plot_data['depth'], plot_data[c],
                                  np.ones_like(df[c].shape)*plot_data[c].min(),
                                  facecolor=profile.fill_color,
                                  interpolate=True)
@@ -107,18 +107,19 @@ def build_figure(data, cfg):
 
             # X axis label
             if profile.xlabel is not None:
-                ax.set_xlabel(profile.xlabel.title())
+                ax.set_xlabel(titlize(profile.xlabel))
 
             # handle xticks
             if profile.name == 'HandHardness':
                 ax.set_xticks([profile.scale[ll] for ll in profile._text_scale])
                 ax.set_xticklabels(profile._text_scale)
+
             if profile.remove_xticks:
                 ax.set_xticklabels([])
 
             # Y axis label
             if profile.ylabel is not None:
-                ax.set_ylabel(profile.ylabel.title())
+                ax.set_ylabel(titlize(profile.ylabel))
 
             # Set X limits
             if profile.xlimits is not None:
@@ -132,8 +133,11 @@ def build_figure(data, cfg):
                 log.debug("Setting y limits to {}:{}".format(*lims))
                 ax.set_ylim(*lims)
 
-            ax.grid()
+            ax.grid(visible=True)
             ax.set_axisbelow(True)
+
+    if cfg['output']['suptitle'] is not None:
+        plt.suptitle(cfg['output']['suptitle'].title())
 
     if cfg['output']['filename'] is not None:
         log.info(f"Saving figure to {cfg['output']['filename']}")
