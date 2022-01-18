@@ -1,15 +1,13 @@
 import sys
 
-import matplotlib.pyplot as plt
-import numpy as np
-from os.path import join, abspath, isdir, isfile
+from os.path import join, isdir
 from os import mkdir
 
 from inicheck.output import generate_config, print_config_report
 from inicheck.tools import check_config, get_checkers, get_user_config
 from collections import OrderedDict
-from . import profiles
 from .plotting import build_figure
+from . import profiles
 from .utilities import get_logger
 from . import __non_data_sections__
 
