@@ -22,7 +22,7 @@ Args:
                 idx = (np.abs(series.index - depth)).argmin()
                 y_val = series.index[idx]
                 x_val = series.loc[y_val].max()
-                ax.annotate(final_label, (x_val, y_val), xytext=(x_val * 1.1, y_val + (abs(y_val)*0.1)),
+                ax.annotate(final_label.upper(), (x_val, y_val), xytext=(x_val * 1.1, y_val + (abs(y_val)*0.1)),
                             arrowprops={'arrowstyle': '->'})
 
 
@@ -52,9 +52,7 @@ def build_figure(data, cfg):
     # the size of a single plot
     fsize = np.array(cfg['output']['figure_size'])
 
-    # Expands the size in the x dir for each plot
-    plot_sections = [s for s in cfg.keys() if s not in __non_data_sections__]
-    nplots = len(plot_sections)
+    nplots = len(data.keys())
     fsize[0] = fsize[0] * nplots
 
     # Build (sub)plots

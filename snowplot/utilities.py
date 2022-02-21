@@ -1,11 +1,11 @@
-import inspect
 import logging
-import sys
-
 import coloredlogs
 
 from inicheck.checkers import CheckType
 from inicheck.utilities import is_valid
+from inicheck.config import MasterConfig
+
+
 
 __version__ = '0.2.0'
 
@@ -153,3 +153,9 @@ def titlize(label):
 
     return temp
 
+def get_profile_defaults(section, core_config):
+    m = MasterConfig(core_config)
+    defaults = {}
+    for name,obj in m.cfg[section].items():
+        defaults[name] = obj.default
+    return defaults

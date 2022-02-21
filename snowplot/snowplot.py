@@ -7,6 +7,8 @@ from inicheck.output import generate_config, print_config_report
 from inicheck.tools import check_config, get_checkers, get_user_config
 from collections import OrderedDict
 from .plotting import build_figure
+
+# required for inicheck 
 from . import profiles
 from .utilities import get_logger
 from . import __non_data_sections__

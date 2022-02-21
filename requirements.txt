@@ -4,4 +4,4 @@ matplotlib==3.1.3
 coloredlogs==10.0
 PyQt5==5.14.1
 snowmicropyn==1.0.1
-
+study_lyte>=0.2.0

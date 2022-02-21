@@ -5,6 +5,8 @@ import pandas as pd
 from snowmicropyn import Profile as SMP
 from numpy import poly1d
 from .utilities import get_logger, titlize
+from study_lyte.io import read_csv
+from study_lyte.detect import get_acceleration_stop, get_nir_surface, get_acceleration_start
 
 
 class GenericProfile(object):
@@ -80,8 +82,9 @@ class GenericProfile(object):
         """
         # Smooth profiles vertically
         if smoothing is not None:
-            self.log.info('Smoothing with {} point window'.format(self.smoothing))
+            self.log.info('Smoothing with a {} point window'.format(self.smoothing))
             df = df.rolling(window=smoothing).mean()
+
         # Check for average profile
         if average_columns:
             df['average'] = df.mean(axis=1)
@@ -127,38 +130,50 @@ class LyteProbeProfile(GenericProfile):
 
         # Collect the header
         self.header_info = {}
+        df, self.header_info = read_csv(self.filename)
 
-        with open(self.filename) as fp:
-            for i, line in enumerate(fp):
-                if '=' in line:
-                    k, v = line.split('=')
-                    k, v = (c.lower().strip() for c in [k, v])
-                    self.header_info[k] = v
-                else:
-                    self.header = i
-                    self.log.debug(
-                        "Header length found to be {} lines".format(i))
-                    break
+        # Config lower cases everything so letsd find a matching name
+        columns = list(df.columns)
+        idx = [c.lower() for c in columns].index(self.column_to_plot.lower())
+        self.column_to_plot = columns[idx]
+        df[self.column_to_plot] = df[self.column_to_plot].astype(float)
 
-            fp.close()
-
-        if 'radicl version' in self.header_info.keys():
+        if 'radicl VERSION' in self.header_info.keys():
             self.data_type = 'radicl'
         else:
             self.data_type = 'rad_app'
 
-        names = [ll.lower().strip() for ll in line.split(',')]
-        df = pd.read_csv(self.filename, header=self.header, names=names)
         return df
 
     def additional_processing(self, df):
         """
         Handles when to convert to cm
         """
-
         if self.data_type == 'rad_app':
             df['depth'] = np.linspace(0, -1.0 * (np.max(df['depth']) / 100.0),
                                       len(df.index))
+
+        if self.data_type == 'radicl':
+            if self.autocrop:
+                # Detect our events
+                start = get_acceleration_start(df['acceleration'])
+                surface = get_nir_surface(df['Sensor2'], df['Sensor3'], threshold=0.01)
+                stop = get_acceleration_stop(df['acceleration'])
+                bottom_depth = df['depth'].iloc[stop]
+
+                # If the surface is greater than the start...avoid it
+                if surface < start:
+                    surface_depth = df['depth'].iloc[start]
+                    df = df.iloc[0:stop].copy()
+
+                else:
+                    self.log.info('Found valid surface...')
+                    surface_depth = df['depth'].iloc[surface]
+                    df = df.iloc[surface:stop].copy()
+
+                df['depth'] = df['depth'] - surface_depth - 4.5
+                self.log.info(f'Using autocropping methods, cropping data to {surface_depth:0.0f} cm to '
+                              f'{bottom_depth:0.0f} cm (HS = {surface_depth - bottom_depth:0.0f} cm)')
 
         # User requested a timeseries plot with an assumed linear depth profile
         if self.assumed_depth is not None:
@@ -174,15 +189,17 @@ class LyteProbeProfile(GenericProfile):
             df['depth'] = np.linspace(0, self.assumed_depth, len(df.index))
 
         # Shift snow surface to 0 cm
-        df['depth'] = df['depth'] - self.surface_depth
+        if self.surface_depth is not None:
+            if self.column_to_plot == 'Sensor1':
+                df['depth'] = df['depth'] - 4.5
 
-        if self.bottom_depth is not None:
-            df = df.loc[0:self.bottom_depth]
+            df['depth'] = df['depth'] - self.surface_depth
 
         df.set_index('depth', inplace=True)
         df = df.sort_index()
 
-        df[self.column_to_plot] = df[self.column_to_plot].astype(float)
+        if self.bottom_depth is not None:
+            df = df.loc[0:self.bottom_depth]
 
         if hasattr(self, 'calibration_coefficients'):
             if self.calibration_coefficients is not None:
@@ -399,5 +416,4 @@ class HandHardnessProfile(LayeredProfile):
         # Cap the data so it looks good
         # data = {'depth': min(depth), 'hardness': '-', 'numeric': 0}
         df = df.append(data, ignore_index=True)
-
         return df
