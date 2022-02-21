@@ -1,10 +1,15 @@
 import pytest
-from snowplot.profiles import HandHardnessProfile
 from os.path import join, dirname
 
-data_dir = join(dirname(__file__),'data')
 
-@pytest.fixture()
-def hand_hardness():
-    filename = join('data', 'hand_hardness.txt')
-    return HandHardnessProfile(filename=filename)
+@pytest.fixture(scope='session')
+def data_dir():
+    return join(dirname(__file__),'data')
+
+@pytest.fixture(scope='session')
+def gold_dir(data_dir):
+    return join(data_dir, 'gold')
+
+@pytest.fixture(scope='session')
+def output_dir():
+    return join(dirname(__file__), 'output')

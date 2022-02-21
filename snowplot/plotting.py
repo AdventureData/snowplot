@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 from os.path import join
 
@@ -51,7 +52,7 @@ def build_figure(data, cfg):
 
     # the size of a single plot
     fsize = np.array(cfg['output']['figure_size'])
-
+    matplotlib.rcParams['figure.dpi'] = cfg['output']['dpi']
     nplots = len(data.keys())
     fsize[0] = fsize[0] * nplots
 
