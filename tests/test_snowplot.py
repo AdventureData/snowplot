@@ -47,9 +47,9 @@ class ConfiguredPlotBase:
     @pytest.fixture(scope='function')
     def output(self, output_dir):
         yield join(output_dir, 'figure.png')
-        #
-        # if isdir(output_dir):
-        #     shutil.rmtree(output_dir)
+
+        if isdir(output_dir):
+            shutil.rmtree(output_dir)
 
     def test_figure(self, figure, output, gold):
         assert compare_images(output, gold, 1e-6) is None

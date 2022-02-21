@@ -1,9 +1,8 @@
 from snowplot.profiles import *
-from . import data_dir
 import pytest
 from os.path import join, dirname, isfile
 from inicheck.tools import get_user_config
-
+import os
 
 class TestHandHardnessProfile():
     section = 'hand_hardness'
@@ -23,7 +22,7 @@ class TestHandHardnessProfile():
             os.remove(f)
 
     @pytest.fixture()
-    def profile(self, config):
+    def profile(self, data_dir, config):
 
         filename = join(data_dir, 'hand_hardness.txt')
         config['filename'] = filename
