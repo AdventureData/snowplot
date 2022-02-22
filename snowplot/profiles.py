@@ -319,10 +319,15 @@ class HandHardnessProfile(LayeredProfile):
     def open(self):
         self.log.info("Opening filename {}".format(basename(self.filename)))
 
+        ext = self.filename.split('.')[-1]
         # Simple text file
-        if self.filename.split('.')[-1] == 'txt':
+        if ext == 'txt':
             df = self.read_simple_text(self.filename)
             df = df.set_index('depth')
+
+        # Try snowex reader
+        elif ext == 'csv':
+            df = self.read_snowex_csv(self.filename)
         else:
             raise NotImplemented('Hand hardness profiles that are not simple text files have not been implemented yet')
 
@@ -349,6 +354,31 @@ class HandHardnessProfile(LayeredProfile):
 
     def read_snowpilot(self, filename=None, url=None):
         pass
+
+    def read_snowex_csv(self, filename):
+        """
+        Read in a csv from snowex campaign
+        Args:
+            filename: Path to a csv containing stratigraphy data
+        Returns:
+            df: pandas dataframe
+        """
+        with open(filename, 'r') as fp:
+            for i, line in enumerate(fp):
+                if line[0] != '#':
+                    break
+
+        df = pd.read_csv(filename, header=i-1)
+
+        # Add in the important information for plotting
+        df['layer_number'] = range(0, len(df.index))
+        df['numeric'] = df.apply(lambda row: self.scale[row['Hand Hardness']], axis=1)
+
+        # Copy the info for top and botom depths and then merge back together
+        df_bottom = df.copy().rename(mapper={'Bottom (cm)': 'depth'}, axis=1).drop(columns=['# Top (cm)'])
+        df_top = df.rename(mapper={'# Top (cm)': 'depth'}, axis=1).drop(columns=['Bottom (cm)'])
+        df = pd.concat([df_top, df_bottom]).set_index('depth')
+        return df
 
     def read_simple_text(self, filename):
         """

@@ -1,0 +1,18 @@
+# Location,Grand Mesa
+# Site,3N22
+# PitID,COGM3N22_20200128
+# Date/Local Time,2020-01-28T13:55
+# UTM Zone,12N
+# Easting,743509
+# Northing,4324117
+# Top (cm),Bottom (cm),Grain Size (mm),Grain Type,Hand Hardness,Manual Wetness,Comments
+100.0,97.0,< 1 mm,DF,F,D,NSFG/RR (Near Surface Faceted Grains/Radiation Recrystallization)
+97.0,71.0,< 1 mm,DF,F,D,NaN
+71.0,70.0,4-6 mm,PPGP,4F,D,Graupel layer
+70.0,60.0,< 1 mm,RG,1F,D,NaN
+60.0,46.5,1-2 mm,FC,F,D,NaN
+46.5,45.5,< 1 mm,MFCR,1F,D,Crust
+45.5,31.0,1-2 mm,FC,F,D,Rounding
+31.0,22.0,< 1 mm,FC,4F,D,facets rounding
+22.0,9.0,1-2 mm,FC,F,D,NaN
+9.0,0.0,1-2 mm,FC,1F,D,Very rounded facets

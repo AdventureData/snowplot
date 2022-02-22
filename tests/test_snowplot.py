@@ -1,5 +1,3 @@
-import shutil
-
 from snowplot.snowplot import make_vertical_plot
 from os.path import isfile, dirname, join, isdir
 from inicheck.tools import get_user_config
@@ -9,14 +7,24 @@ import os
 import pytest
 from matplotlib.testing.compare import compare_images
 
-class ConfiguredPlotBase:
+
+@pytest.mark.parametrize('section, cfg_dict, gold_fig', [
+    # Test Hand hardness
+    ('hand_hardness', {'filename': './data/hand_hardness.txt'}, 'single_hand_hardness.png'),
+    ('hand_hardness', {'filename': './data/snowex_stratigraphy.csv'}, 'snowex_handhardness_profiles.png'),
+    # Test lyte probe
+    ('lyte_probe', {'filename': './data/lyte_profile.csv',
+                    'calibration_coefficients': '-1.46799e-06, 0.01441, -50.765, 64700.4'},
+     'single_lyte_profile.png'),
+    # Test SMP
+    ('snow_micropen', {'filename': './data/smp.pnt'}, 'single_smp_profile.png')
+])
+class TestMakeVerticalPlot:
     # Section to write to
-    section = None
-    gold_fig = None
 
     @pytest.fixture(scope='function')
-    def config(self, cfg_dict):
-        s = f'[{self.section}]\n'
+    def config(self, cfg_dict, section):
+        s = f'[{section}]\n'
         for k, v in cfg_dict.items():
             s += f'{k}: {v}\n'
         f = join(dirname(__file__), 'config.ini')
@@ -41,8 +49,8 @@ class ConfiguredPlotBase:
         make_vertical_plot(config)
 
     @pytest.fixture(scope='function')
-    def gold(self, gold_dir):
-        yield join(gold_dir, self.gold_fig)
+    def gold(self, gold_dir, gold_fig):
+        yield join(gold_dir, gold_fig)
 
     @pytest.fixture(scope='function')
     def output(self, output_dir):
@@ -53,22 +61,3 @@ class ConfiguredPlotBase:
 
     def test_figure(self, figure, output, gold):
         assert compare_images(output, gold, 1e-6) is None
-
-
-@pytest.mark.parametrize('cfg_dict', [{'filename': './data/hand_hardness.txt'}])
-class TestHandHardnessPlot(ConfiguredPlotBase):
-    section = 'hand_hardness'
-    gold_fig = 'single_hand_hardness.png'
-
-
-@pytest.mark.parametrize('cfg_dict', [{'filename': './data/lyte_profile.csv',
-                                       'calibration_coefficients': '-1.46799e-06, 0.01441, -50.765, 64700.4'}])
-class TestLyteProbePlot(ConfiguredPlotBase):
-    section = 'lyte_probe'
-    gold_fig = 'single_lyte_profile.png'
-
-
-@pytest.mark.parametrize('cfg_dict', [{'filename': './data/smp.pnt'}])
-class TestSMPPlot(ConfiguredPlotBase):
-    section = 'snow_micropen'
-    gold_fig = 'single_smp_profile.png'
