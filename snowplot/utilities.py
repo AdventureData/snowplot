@@ -1,11 +1,9 @@
 import logging
+
 import coloredlogs
-
 from inicheck.checkers import CheckType
-from inicheck.utilities import is_valid
 from inicheck.config import MasterConfig
-
-
+from inicheck.utilities import is_valid
 
 __version__ = '0.2.0'
 
@@ -57,6 +55,18 @@ class CheckFloatPair(CheckType):
         self.msg_level = "error"
         self.is_list = True
         self.type_func = float
+
+    class CheckStringPair(CheckType):
+        """
+        Check to see if the list provided is the same length as the number of plots
+        being requested
+        """
+
+        def __init__(self, **kwargs):
+            super(CheckStringPair, self).__init__(**kwargs)
+            self.msg_level = "error"
+            self.is_list = True
+            self.type_func = str
 
     def valid_length(self):
         """

@@ -1,8 +1,7 @@
 """Console script for snowplot."""
 import argparse
 import sys
-
-from .snowplot import make_vertical_plot
+from snowplot.figure import make_vertical_plot
 
 
 def main():

@@ -1,7 +1,5 @@
 """Top-level package for snowplot."""
-
 from os.path import abspath, dirname, join
-
 from .utilities import getConfigHeader
 
 # Inicheck attributes for config files
@@ -17,7 +15,6 @@ __config_header__ = getConfigHeader()
 __config_checkers__ = 'utilities'
 
 __author__ = """Micah Johnson"""
-__email__ = 'micah.johnson150@gmail.com'
 __version__ = '0.2.0'
 
 __non_data_sections__ = ['output']

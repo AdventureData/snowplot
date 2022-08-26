@@ -1,20 +1,17 @@
 import sys
-
-from os.path import join, isdir
+from collections import OrderedDict
 from os import mkdir
+from os.path import join, isdir, dirname
 
 from inicheck.output import generate_config, print_config_report
 from inicheck.tools import check_config, get_checkers, get_user_config
-from collections import OrderedDict
-from .plotting import build_figure
 
 # required for inicheck
-from . import profiles
-from .utilities import get_logger
-from . import __non_data_sections__
+import snowplot.utilities
+import snowplot.profiles
+import snowplot.plotting
 
 """Main module."""
-log = get_logger('snowplot')
 
 
 def make_vertical_plot(config_file):
@@ -25,11 +22,11 @@ def make_vertical_plot(config_file):
     Args:
         config_file: config file in .ini format and can be checked with inicheck
     """
-
     # Get the cfg
-    ucfg = get_user_config(config_file, modules=['snowplot'])
+    log = snowplot.utilities.get_logger("snowplot")
+    ucfg = get_user_config(config_file, modules='snowplot', cli=True)
     warnings, errors = check_config(ucfg)
-
+    print(warnings, errors)
     print_config_report(warnings, errors)
     if len(errors) > 0:
         print("Errors in config file. Check report above.")
@@ -53,7 +50,7 @@ def make_vertical_plot(config_file):
     # Create a map of the class names to the config names
     requested_profiles = OrderedDict()
     for v in cfg.keys():
-        if v not in __non_data_sections__:
+        if v not in snowplot.__non_data_sections__:
             k = v.replace('_', '').lower()
             requested_profiles[k] = v
 
@@ -67,4 +64,4 @@ def make_vertical_plot(config_file):
             data[profile_name] = cls(**cfg[name])
 
     # Build the final figure
-    build_figure(data, cfg)
+    snowplot.plotting.build_figure(data, cfg)

@@ -1,10 +1,11 @@
-import matplotlib.pyplot as plt
-import matplotlib
-import numpy as np
 from os.path import join
 
-from .utilities import get_logger, titlize
-from . import __non_data_sections__
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+from snowplot.utilities import get_logger, titlize
+
 
 def add_plot_annotations(ax, series, label_list):
     """
@@ -23,7 +24,7 @@ Args:
                 idx = (np.abs(series.index - depth)).argmin()
                 y_val = series.index[idx]
                 x_val = series.loc[y_val].max()
-                ax.annotate(final_label.upper(), (x_val, y_val), xytext=(x_val * 1.1, y_val + (abs(y_val)*0.1)),
+                ax.annotate(final_label.upper(), (x_val, y_val), xytext=(x_val * 1.1, y_val + (abs(y_val) * 0.1)),
                             arrowprops={'arrowstyle': '->'})
 
 
@@ -58,82 +59,79 @@ def build_figure(data, cfg):
 
     # Build (sub)plots
     fig, axes = plt.subplots(1, nplots, figsize=fsize)
+    if nplots == 1:
+        axes = [axes]
 
     log.info("Generating {} subplots...".format(nplots))
-    for i in range(nplots):
-        for name, profile in data.items():
-            if nplots > 1:
-                ax = axes[profile.plot_id]
-            else:
-                ax = axes
+    for name, profile in data.items():
+        ax = axes[profile.plot_id]
 
-            # Plot up the data
-            df = profile.df
+        # Plot up the data
+        df = profile.df
 
-            # Add colums
-            c = profile.column_to_plot
-            log.debug("Adding {}.{}".format(name, c))
-            if profile.is_layered_data:
-                plot_data = profile.get_layered_profile()
-            else:
-                plot_data = df
-            plot_data = plot_data.reset_index()
-            ax.plot(plot_data[c], plot_data['depth'], c=profile.line_color, label=c, linewidth=0.1)
+        # Add colums
+        c = profile.column_to_plot
+        log.debug("Adding {}.{}".format(name, c))
+        if profile.is_layered_data:
+            plot_data = profile.get_layered_profile()
+        else:
+            plot_data = df
+        plot_data = plot_data.reset_index()
+        ax.plot(plot_data[c], plot_data['depth'], c=profile.line_color, label=c, linewidth=0.1)
 
-            # Fill the plot
-            if profile.fill_solid:
-                log.debug('Applying horizontal fill to {}.{}'
-                          ''.format(name, c))
+        # Fill the plot
+        if profile.fill_solid:
+            log.debug('Applying horizontal fill to {}.{}'
+                      ''.format(name, c))
+            ax.fill_betweenx(plot_data['depth'], plot_data[c],
+                             np.ones_like(df[c].shape) * profile.xlimits[0],
+                             facecolor=profile.fill_color,
+                             interpolate=True)
+        # Add_plot_labels
+        if profile.plot_labels is not None:
+            log.info("Adding {} annotations...".format(len(profile.plot_labels)))
+            add_plot_annotations(ax, df[c], profile.plot_labels)
 
-                ax.fill_betweenx(plot_data['depth'], plot_data[c],
-                                 np.ones_like(df[c].shape)*plot_data[c].min(),
-                                 facecolor=profile.fill_color,
-                                 interpolate=True)
-            # Add_plot_labels
-            if profile.plot_labels is not None:
-                log.info("Adding {} annotations...".format(len(profile.plot_labels)))
-                add_plot_annotations(ax, df[c], profile.plot_labels)
+        # Create a problem layer
+        if profile.problem_layer is not None:
+            depth = profile.problem_layer
+            log.info("Adding a problem layer to plot at {}...".format(depth))
+            ax.axhline(y=depth, color='r')
 
-            # Create a problem layer
-            if profile.problem_layer is not None:
-                depth = profile.problem_layer
-                log.info("Adding a problem layer to plot at {}...".format(depth))
-                ax.axhline(y=depth, color='r')
+        # Custom titles
+        if profile.title is not None:
+            ax.set_title(profile.title)
 
-            # Custom titles
-            if profile.title is not None:
-                ax.set_title(profile.title)
+        # X axis label
+        if profile.xlabel is not None:
+            ax.set_xlabel(titlize(profile.xlabel))
 
-            # X axis label
-            if profile.xlabel is not None:
-                ax.set_xlabel(titlize(profile.xlabel))
+        # handle xticks
+        if profile.name in ['HandHardness', 'GrainSize']:
+            ax.set_xticks([profile.scale[ll] for ll in profile._text_scale])
+            ax.set_xticklabels(profile._text_scale)
 
-            # handle xticks
-            if profile.name == 'HandHardness':
-                ax.set_xticks([profile.scale[ll] for ll in profile._text_scale])
-                ax.set_xticklabels(profile._text_scale)
+        if profile.remove_xticks:
+            ax.set_xticklabels([])
 
-            if profile.remove_xticks:
-                ax.set_xticklabels([])
+        # Y axis label
+        if profile.ylabel is not None:
+            ax.set_ylabel(titlize(profile.ylabel))
 
-            # Y axis label
-            if profile.ylabel is not None:
-                ax.set_ylabel(titlize(profile.ylabel))
+        # Set X limits
+        if profile.xlimits is not None:
+            lims = sorted(profile.xlimits)
+            log.debug("Setting x limits to {}:{}".format(*lims))
+            ax.set_xlim(*lims)
 
-            # Set X limits
-            if profile.xlimits is not None:
-                lims = sorted(profile.xlimits)
-                log.debug("Setting x limits to {}:{}".format(*lims))
-                ax.set_xlim(*lims)
+        # Set y limits
+        if profile.ylimits is not None:
+            lims = sorted(profile.ylimits)
+            log.debug("Setting y limits to {}:{}".format(*lims))
+            ax.set_ylim(*lims)
 
-            # Set y limits
-            if profile.ylimits is not None:
-                lims = sorted(profile.ylimits)
-                log.debug("Setting y limits to {}:{}".format(*lims))
-                ax.set_ylim(*lims)
-
-            ax.grid(visible=True)
-            ax.set_axisbelow(True)
+        ax.grid(visible=True)
+        ax.set_axisbelow(True)
 
     if cfg['output']['suptitle'] is not None:
         plt.suptitle(cfg['output']['suptitle'].title())

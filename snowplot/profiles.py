@@ -2,11 +2,14 @@ from os.path import abspath, basename, expanduser
 
 import numpy as np
 import pandas as pd
-from snowmicropyn import Profile as SMP
+from PIL import Image
 from numpy import poly1d
-from .utilities import get_logger, titlize
-from study_lyte.io import read_csv
+from snowmicropyn import Profile as SMP
+from study_lyte.depth import get_depth_from_acceleration
 from study_lyte.detect import get_acceleration_stop, get_nir_surface, get_acceleration_start
+from study_lyte.io import read_csv
+
+from .utilities import get_logger, titlize
 
 
 class GenericProfile(object):
@@ -23,6 +26,8 @@ class GenericProfile(object):
         # Set Tick labels
         self.x_ticks = None
         self.column_to_plot = None
+        self._scale = None
+
         # Use for density profiles, hand hardness profiles any data with distinguished layers
         self.is_layered_data = False
 
@@ -92,6 +97,9 @@ class GenericProfile(object):
         # Apply user defined additional_processing
         df = self.additional_processing(df)
 
+        if self.xlimits is None and self.column_to_plot is not None:
+            self.xlimits = [df[self.column_to_plot].min(), df[self.column_to_plot].max()]
+
         return df
 
     def additional_processing(self, df):
@@ -154,29 +162,44 @@ class LyteProbeProfile(GenericProfile):
                                       len(df.index))
 
         if self.data_type == 'radicl':
+            if 'acceleration' in df.columns:
+                acol = 'acceleration'
+            else:
+                acol = 'Y-Axis'
+            if 'time' not in df.columns:
+                df['time'] = np.linspace(0, len(df.index) * 16000, len(df.index))
+            # Detect our events
+            n_basis = int(0.01 * len(df.index))
+
+            start = get_acceleration_start(df[acol].values, n_points_for_basis=n_basis, threshold=0.1)
+            stop = get_acceleration_stop(df[acol].values, n_points_for_basis=n_basis, threshold=0.7)
+            surface = get_nir_surface(df['Sensor2'].iloc[start:stop], df['Sensor3'].iloc[start:stop], threshold=0.02)
+            surface = surface + start
+
+            if self.depth_method in ['acc', 'avg']:
+                self.log.info('Calculating Depth from accelerometer...')
+                acc_depth = get_depth_from_acceleration(df)
+                acc_depth['time'] = df.index
+                acc_depth.set_index('time', inplace=True)
+
+                df['acc_depth'] = acc_depth[acol].mul(-100)
+                if self.depth_method == 'acc':
+                    df['depth'] = df['acc_depth'].copy()
+
+                elif self.depth_method == 'avg':
+                    df['acc_depth'] = df[['depth', 'acc_depth']].mean(axis=0)
+
+            if self.column_to_plot == 'sensor1':
+                df['depth'] = df['depth'] - 4.5
+            surface_depth = df['depth'].iloc[surface]
             if self.autocrop:
-                # Detect our events
-                start = get_acceleration_start(df['acceleration'])
-                surface = get_nir_surface(df['Sensor2'], df['Sensor3'], threshold=0.01)
-                stop = get_acceleration_stop(df['acceleration'])
                 bottom_depth = df['depth'].iloc[stop]
-
-                # If the surface is greater than the start...avoid it
-                if surface < start:
-                    surface_depth = df['depth'].iloc[start]
-                    df = df.iloc[0:stop].copy()
-
-                else:
-                    self.log.info('Found valid surface...')
-                    surface_depth = df['depth'].iloc[surface]
-                    df = df.iloc[surface:stop].copy()
-
-                df['depth'] = df['depth'] - surface_depth - 4.5
+                df = df.iloc[surface:stop]
                 self.log.info(f'Using autocropping methods, cropping data to {surface_depth:0.0f} cm to '
                               f'{bottom_depth:0.0f} cm (HS = {surface_depth - bottom_depth:0.0f} cm)')
 
         # User requested a timeseries plot with an assumed linear depth profile
-        if self.assumed_depth is not None:
+        elif self.assumed_depth is not None:
             # if the user assigned a positive depth by accident
             if self.assumed_depth > 0:
                 self.assumed_depth *= -1
@@ -207,7 +230,6 @@ class LyteProbeProfile(GenericProfile):
 
                 poly = poly1d(self.calibration_coefficients)
                 df[self.column_to_plot] = poly(df[self.column_to_plot])
-
         return df
 
 
@@ -234,7 +256,7 @@ class SnowMicroPenProfile(GenericProfile):
     def additional_processing(self, df):
         # Convert into CM from MM and set 0 at the start
         self.log.info('Converting `distance` to cm and setting top to 0...')
-        df['depth'] = df['distance'].div(-1)
+        df['depth'] = df['distance'].div(-10)
         df = df.set_index('depth')
         df = df.sort_index()
         self.log.info('Converting N into mN...')
@@ -243,9 +265,50 @@ class SnowMicroPenProfile(GenericProfile):
 
 
 class LayeredProfile(GenericProfile):
+    _text_scale = []  # Define for each class
+    _snowex_column = None
+
     def __init__(self, **kwargs):
         super(LayeredProfile, self).__init__(**kwargs)
         self.is_layered_data = True
+        self.fill_solid = True
+        self.column_to_plot = 'numeric'
+        self._scale = None
+        # Alternate labels to use for x_tick
+        self.x_ticks = self._text_scale # TODO this needs adjusting for hand hardness
+
+        # if self.xlimits is not None:
+        #     for i, v in enumerate(self.xlimits):
+        #         if type(v) is str:
+        #             self.xlimits[i] = self.scale[v]
+        # print("")
+    def open(self):
+        self.log.info("Opening filename {}".format(basename(self.filename)))
+
+        ext = self.filename.split('.')[-1]
+        # Simple text file
+        if ext == 'txt':
+            df = self.read_simple_text(self.filename)
+            df = df.set_index('depth')
+
+        # Try snowex reader
+        elif ext == 'csv':
+            df = self.read_snowex_csv(self.filename)
+        else:
+            raise NotImplemented('Hand hardness profiles that are not simple text files have not been implemented yet')
+
+        return df
+
+    @property
+    def scale(self):
+        """
+        Returns the mapping of characater data like F+ to a number for plotting
+        """
+        if self._scale is None:
+            self._scale = {}
+            for i, h in enumerate(self._text_scale):
+                self._scale[h] = i + 1
+        return self._scale
 
     def get_layered_profile(self):
         """
@@ -291,68 +354,7 @@ class LayeredProfile(GenericProfile):
         final = pd.DataFrame.from_dict(d).set_index('index')
         return final
 
-
-class HandHardnessProfile(LayeredProfile):
-    """
-    A class for handling hand hardness data. Currently set for only reading a
-    custom file but later will read other data
-    """
-    _text_scale = ['F', '4F', '1F', 'P', 'K', 'I']
-
-    def __init__(self, **kwargs):
-        # Build the numeric scale
-        self.scale = self._build_scale()
-
-        super(HandHardnessProfile, self).__init__(**kwargs)
-        self.fill_solid = True
-        self.column_to_plot = 'numeric'
-        self.is_layered_data = True
-
-        # Alternate labels to use for x_tick
-        self.x_ticks = self._text_scale
-
-        if self.xlimits is not None:
-            if type(self.xlimits[0]) is str:
-                for i, v in enumerate(self.xlimits):
-                    self.xlimits[i] = self.scale[v]
-
-    def open(self):
-        self.log.info("Opening filename {}".format(basename(self.filename)))
-
-        ext = self.filename.split('.')[-1]
-        # Simple text file
-        if ext == 'txt':
-            df = self.read_simple_text(self.filename)
-            df = df.set_index('depth')
-
-        # Try snowex reader
-        elif ext == 'csv':
-            df = self.read_snowex_csv(self.filename)
-        else:
-            raise NotImplemented('Hand hardness profiles that are not simple text files have not been implemented yet')
-
-        return df
-
-    def _build_scale(self):
-        """
-        Returns the mapping of characater data like F+ to a number for plotting
-        """
-        scale = {}
-        count = 1
-        for h in self._text_scale:
-            hv = h
-            if h != 'I':
-                for b in ['-', '', '+']:
-                    hv = '{}{}'.format(h, b)
-
-                    scale[hv] = count
-                    count += 1.0
-            else:
-                scale[hv] = count
-                count += 1.0
-        return scale
-
-    def read_snowpilot(self, filename=None, url=None):
+    def read_simple_text(self, filename):
         pass
 
     def read_snowex_csv(self, filename):
@@ -368,17 +370,36 @@ class HandHardnessProfile(LayeredProfile):
                 if line[0] != '#':
                     break
 
-        df = pd.read_csv(filename, header=i-1)
+        df = pd.read_csv(filename, header=i - 1)
 
         # Add in the important information for plotting
         df['layer_number'] = range(0, len(df.index))
-        df['numeric'] = df.apply(lambda row: self.scale[row['Hand Hardness']], axis=1)
+        df['numeric'] = df.apply(lambda row: self.scale[row[self._snowex_column]], axis=1)
 
         # Copy the info for top and botom depths and then merge back together
         df_bottom = df.copy().rename(mapper={'Bottom (cm)': 'depth'}, axis=1).drop(columns=['# Top (cm)'])
         df_top = df.rename(mapper={'# Top (cm)': 'depth'}, axis=1).drop(columns=['Bottom (cm)'])
         df = pd.concat([df_top, df_bottom]).set_index('depth')
         return df
+
+
+class HandHardnessProfile(LayeredProfile):
+    """
+    A class for handling hand hardness data. Currently set for only reading a
+    custom file but later will read other data
+    """
+    _text_scale = ['F-', 'F', 'F+',
+                   '4F-', '4F', '4F+',
+                   '1F-', '1F', '1F+',
+                   'P-', 'P', 'P+',
+                   'K-', 'K', 'K+', 'I']
+    _snowex_column = 'Hand Hardness'
+
+    def __init__(self, **kwargs):
+        super(HandHardnessProfile, self).__init__(**kwargs)
+
+    def read_snowpilot(self, filename=None, url=None):
+        pass
 
     def read_simple_text(self, filename):
         """
@@ -447,3 +468,22 @@ class HandHardnessProfile(LayeredProfile):
         # data = {'depth': min(depth), 'hardness': '-', 'numeric': 0}
         df = df.append(data, ignore_index=True)
         return df
+
+
+class GrainSizeProfile(LayeredProfile):
+    _text_scale = ['< 1 mm', '1-2 mm', '2-4 mm', '4-6 mm', '>6 mm']
+    _snowex_column = 'Grain Size (mm)'
+    def __init__(self, **kwargs):
+        super(GrainSizeProfile, self).__init__(**kwargs)
+        self._scale = None
+
+class NIRPhotoProfile(GenericProfile):
+    """
+    Generate a profile using an NIR photo
+    """
+
+    def __init__(self, **kwargs):
+        super(NIRPhotoProfile, self).__init__(**kwargs)
+
+    def open(self):
+        self.img = np.array(Image.open(self.filename))
