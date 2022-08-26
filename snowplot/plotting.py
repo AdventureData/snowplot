@@ -107,9 +107,9 @@ def build_figure(data, cfg):
             ax.set_xlabel(titlize(profile.xlabel))
 
         # handle xticks
-        if profile.name in ['HandHardness', 'GrainSize']:
-            ax.set_xticks([profile.scale[ll] for ll in profile._text_scale])
-            ax.set_xticklabels(profile._text_scale)
+        if profile.is_layered_data:
+            ax.set_xticks([profile.scale[ll] for ll in profile.xtick_labels])
+            ax.set_xticklabels(profile.xtick_labels)
 
         if profile.remove_xticks:
             ax.set_xticklabels([])

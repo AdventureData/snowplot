@@ -2,7 +2,7 @@ from os.path import abspath, basename, expanduser
 
 import numpy as np
 import pandas as pd
-from PIL import Image
+#from PIL import Image
 from numpy import poly1d
 from snowmicropyn import Profile as SMP
 from study_lyte.depth import get_depth_from_acceleration
@@ -164,17 +164,21 @@ class LyteProbeProfile(GenericProfile):
         if self.data_type == 'radicl':
             if 'acceleration' in df.columns:
                 acol = 'acceleration'
-            else:
+            elif 'Y-Axis' in df.columns:
                 acol = 'Y-Axis'
+            else:
+                acol = None
             if 'time' not in df.columns:
                 df['time'] = np.linspace(0, len(df.index) * 16000, len(df.index))
             # Detect our events
             n_basis = int(0.01 * len(df.index))
-
-            start = get_acceleration_start(df[acol].values, n_points_for_basis=n_basis, threshold=0.1)
-            stop = get_acceleration_stop(df[acol].values, n_points_for_basis=n_basis, threshold=0.7)
-            surface = get_nir_surface(df['Sensor2'].iloc[start:stop], df['Sensor3'].iloc[start:stop], threshold=0.02)
-            surface = surface + start
+            if acol is not None:
+                start = get_acceleration_start(df[acol].values, n_points_for_basis=n_basis, threshold=0.1)
+                stop = get_acceleration_stop(df[acol].values, n_points_for_basis=n_basis, threshold=0.7)
+                surface = get_nir_surface(df['Sensor2'].iloc[start:stop], df['Sensor3'].iloc[start:stop], threshold=0.02)
+                surface = surface + start
+            else:
+                surface = 0
 
             if self.depth_method in ['acc', 'avg']:
                 self.log.info('Calculating Depth from accelerometer...')
@@ -274,14 +278,8 @@ class LayeredProfile(GenericProfile):
         self.fill_solid = True
         self.column_to_plot = 'numeric'
         self._scale = None
-        # Alternate labels to use for x_tick
-        self.x_ticks = self._text_scale # TODO this needs adjusting for hand hardness
+        self.xtick_labels = None
 
-        # if self.xlimits is not None:
-        #     for i, v in enumerate(self.xlimits):
-        #         if type(v) is str:
-        #             self.xlimits[i] = self.scale[v]
-        # print("")
     def open(self):
         self.log.info("Opening filename {}".format(basename(self.filename)))
 
@@ -379,7 +377,17 @@ class LayeredProfile(GenericProfile):
         # Copy the info for top and botom depths and then merge back together
         df_bottom = df.copy().rename(mapper={'Bottom (cm)': 'depth'}, axis=1).drop(columns=['# Top (cm)'])
         df_top = df.rename(mapper={'# Top (cm)': 'depth'}, axis=1).drop(columns=['Bottom (cm)'])
+        # Check for positive depth
+        mn = min(df_top['depth'])
+        mx = max(df_top['depth'])
+        if mx > 0 and mn >= 0:
+            self.log.debug('Positive snow height, inverting to negative')
+            depth = [d - mx for d in df_top['depth']]
+            df_top['depth'] = df_top['depth'] = depth
+            df_bottom['depth'] = [d - mx for d in df_bottom['depth']]
+
         df = pd.concat([df_top, df_bottom]).set_index('depth')
+
         return df
 
 
@@ -394,9 +402,9 @@ class HandHardnessProfile(LayeredProfile):
                    'P-', 'P', 'P+',
                    'K-', 'K', 'K+', 'I']
     _snowex_column = 'Hand Hardness'
-
     def __init__(self, **kwargs):
         super(HandHardnessProfile, self).__init__(**kwargs)
+        self.xtick_labels = [ch for ch in self._text_scale if ch.isalnum()]
 
     def read_snowpilot(self, filename=None, url=None):
         pass
@@ -476,6 +484,7 @@ class GrainSizeProfile(LayeredProfile):
     def __init__(self, **kwargs):
         super(GrainSizeProfile, self).__init__(**kwargs)
         self._scale = None
+        self.xtick_labels = self._text_scale
 
 class NIRPhotoProfile(GenericProfile):
     """
